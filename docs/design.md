@@ -75,12 +75,12 @@ Renderers read `bundle.json` + resolve assets from `assets/`. No runner-specific
 
 ### `@qa-instructions/core`
 
-| Module | Responsibility |
-|--------|----------------|
-| `model/` | Types: `QaRunBundle`, `QaStep`, `QaAsset` |
-| `bundle/` | `createBundle()`, `addStep()`, `addAsset()`, `finalizeBundle()` — in-memory builder |
-| `bundle/io/` | `writeBundle(dir, bundle, assets)`, `readBundle(dir)` |
-| `render/` | Pure transforms: `renderQaSteps(bundle) → string`, `renderMarkdown(bundle) → string` |
+| Module       | Responsibility                                                                       |
+| ------------ | ------------------------------------------------------------------------------------ |
+| `model/`     | Types: `QaRunBundle`, `QaStep`, `QaAsset`                                            |
+| `bundle/`    | `createBundle()`, `addStep()`, `addAsset()`, `finalizeBundle()` — in-memory builder  |
+| `bundle/io/` | `writeBundle(dir, bundle, assets)`, `readBundle(dir)`                                |
+| `render/`    | Pure transforms: `renderQaSteps(bundle) → string`, `renderMarkdown(bundle) → string` |
 
 Render functions return strings (or `{ content, assets }` for formats that rewrite paths). They never call Playwright or touch the filesystem unless explicitly passed a bundle directory for asset path resolution.
 
@@ -127,11 +127,11 @@ const text = renderQaSteps(bundle);
 
 ## Renderers (Phase 1 → 2)
 
-| Renderer | Output | Consumer | Phase |
-|----------|--------|----------|-------|
-| `renderQaSteps` | Plain numbered list | Jira / ticket QA field | 1 |
-| `renderMarkdown` | Markdown + `![](assets/…)` | PR artifacts, docs | 2 |
-| `renderJson` | Pretty-printed bundle | Tooling, passthrough | 1 |
+| Renderer         | Output                     | Consumer               | Phase |
+| ---------------- | -------------------------- | ---------------------- | ----- |
+| `renderQaSteps`  | Plain numbered list        | Jira / ticket QA field | 1     |
+| `renderMarkdown` | Markdown + `![](assets/…)` | PR artifacts, docs     | 2     |
+| `renderJson`     | Pretty-printed bundle      | Tooling, passthrough   | 1     |
 
 Phase 1 ships `renderQaSteps` and `renderJson`. Markdown is one function away once bundle format is stable.
 
@@ -175,7 +175,9 @@ test('Create a project', async ({ qa, page }) => {
     'Project list loads with no error',
     async () => {
       await page.goto('https://app.example.com/projects');
-      await expect(page.getByRole('heading', { name: 'Projects' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: 'Projects' }),
+      ).toBeVisible();
     },
   );
 

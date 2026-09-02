@@ -12,7 +12,10 @@ test('writeBundle and readBundle round-trip', async () => {
   try {
     const builder = createBundleBuilder();
     builder.guide({ title: 'Login' });
-    builder.addStep({ action: 'Open /login', assetIds: ['step-01-screenshot'] });
+    builder.addStep({
+      action: 'Open /login',
+      assetIds: ['step-01-screenshot'],
+    });
     builder.addAsset({
       id: 'step-01-screenshot',
       contentType: 'image/png',

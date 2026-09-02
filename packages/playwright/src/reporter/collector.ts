@@ -19,7 +19,10 @@ type CollectorOptions = {
   outputDir?: string;
 };
 
-function collectAssets(result: TestResult, bundle: QaRunBundle): QaAssetInput[] {
+function collectAssets(
+  result: TestResult,
+  bundle: QaRunBundle,
+): QaAssetInput[] {
   const screenshots: Buffer[] = [];
 
   for (const step of result.steps) {
@@ -35,8 +38,7 @@ function collectAssets(result: TestResult, bundle: QaRunBundle): QaAssetInput[] 
 
   for (let i = 0; i < screenshots.length; i += 1) {
     const assetId =
-      declaredIds[i] ??
-      `step-${String(i + 1).padStart(2, '0')}-screenshot`;
+      declaredIds[i] ?? `step-${String(i + 1).padStart(2, '0')}-screenshot`;
     assets.push({
       id: assetId,
       contentType: 'image/png',

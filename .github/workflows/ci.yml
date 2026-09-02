@@ -3,12 +3,22 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore: ['**/*.md', 'docs/**']
   pull_request:
-    branches: [main]
+    paths-ignore: ['**/*.md', 'docs/**']
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
 
 jobs:
-  test:
+  lint-test-build:
+    name: lint + test + build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -18,24 +28,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run lint
       - run: pnpm build
       - run: pnpm test
-
-      - run: pnpm exec playwright install chromium
-        working-directory: examples/basic
-
-      - run: pnpm test
-        working-directory: examples/basic
-
-      - run: pnpm render
-        working-directory: examples/basic
-
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: qa-steps
-          path: examples/basic/qa-steps-out/

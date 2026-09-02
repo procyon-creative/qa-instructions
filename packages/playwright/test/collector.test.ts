@@ -51,7 +51,9 @@ test('collector writes bundle dir from attachments', async () => {
         capturedAt: new Date().toISOString(),
         status: 'complete',
       },
-      steps: [{ index: 1, action: 'Open /login', assetIds: ['step-01-screenshot'] }],
+      steps: [
+        { index: 1, action: 'Open /login', assetIds: ['step-01-screenshot'] },
+      ],
       assets: {
         'step-01-screenshot': {
           id: 'step-01-screenshot',
@@ -72,7 +74,12 @@ test('collector writes bundle dir from attachments', async () => {
     assert.match(raw, /"title": "Login"/);
 
     const png = await readFile(
-      path.join(out, 'login--user-can-log-in', 'assets', 'step-01-screenshot.png'),
+      path.join(
+        out,
+        'login--user-can-log-in',
+        'assets',
+        'step-01-screenshot.png',
+      ),
     );
     assert.equal(png.toString(), 'png-bytes');
   } finally {

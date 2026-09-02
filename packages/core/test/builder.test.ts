@@ -28,6 +28,9 @@ test('createBundleBuilder accumulates steps and assets', () => {
   assert.equal(bundle.meta.source?.runner, 'playwright');
   assert.equal(bundle.steps.length, 1);
   assert.equal(step.index, 1);
-  assert.equal(bundle.assets['step-01-screenshot'].filename, 'step-01-screenshot.png');
+  assert.equal(
+    bundle.assets['step-01-screenshot'].filename,
+    'step-01-screenshot.png',
+  );
   assert.equal(builder.pendingAssets().length, 1);
 });

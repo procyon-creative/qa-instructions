@@ -23,6 +23,7 @@ research → grill → design → [user gate] → plan → SDD execute → verif
 **Output:** `docs/research/YYYY-MM-DD-<topic>.md` with primary-source citations
 
 **Questions answered before any design:**
+
 - Does a product already do this?
 - What are the framework extension APIs?
 - Build vs contribute upstream?
@@ -60,6 +61,7 @@ research → grill → design → [user gate] → plan → SDD execute → verif
 **Workspace:** `.superpowers/sdd/<plan-basename>/progress.md` ledger
 
 **Rules:**
+
 - One implementer subagent per plan task
 - Task reviewer after each task
 - Continuous execution until all plan tasks complete
@@ -75,6 +77,7 @@ research → grill → design → [user gate] → plan → SDD execute → verif
 **Skill:** verification-before-completion (if available)
 
 **Checks:**
+
 - All plan tasks ledgered complete
 - `pnpm test` (or equivalent) passes
 - Success criteria from design.md explicitly checked
@@ -85,6 +88,7 @@ research → grill → design → [user gate] → plan → SDD execute → verif
 **Skill:** finishing-a-development-branch
 
 **Brief presents:**
+
 - What shipped (commits, packages)
 - What was deferred (ledger rulings, parked findings)
 - Success criteria: met / not met
@@ -108,14 +112,14 @@ This is CI-driven, not agent-driven. No unbounded agent work.
 
 ## Anti-patterns (this project violated)
 
-| Violation | Correct phase |
-|-----------|---------------|
-| Scaffold code before plan | After phase 4 |
-| Web search instead of research skill | Phase 1 |
-| Ask user "which execution approach?" | SDD is default; just run it |
-| SDD tasks 1–2 then inline 3–9 | Phase 5 throughout |
-| Explain instead of execute when user says go | Phase 5 |
-| loop-me / workflow spec never written | Before or during phase 2–3 |
+| Violation                                    | Correct phase               |
+| -------------------------------------------- | --------------------------- |
+| Scaffold code before plan                    | After phase 4               |
+| Web search instead of research skill         | Phase 1                     |
+| Ask user "which execution approach?"         | SDD is default; just run it |
+| SDD tasks 1–2 then inline 3–9                | Phase 5 throughout          |
+| Explain instead of execute when user says go | Phase 5                     |
+| loop-me / workflow spec never written        | Before or during phase 2–3  |
 
 ## Definition of done
 

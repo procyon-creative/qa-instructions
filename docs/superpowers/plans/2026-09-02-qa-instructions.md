@@ -80,12 +80,14 @@ qa-instructions/
 ### Task 1: Monorepo scaffold
 
 **Files:**
+
 - Create: `package.json`
 - Create: `pnpm-workspace.yaml`
 - Create: `tsconfig.base.json`
 - Create: `.gitignore`
 
 **Interfaces:**
+
 - Produces: pnpm workspace with `packages/*` and `examples/*` globs
 
 - [ ] **Step 1: Create root `package.json`**
@@ -162,6 +164,7 @@ git commit -m "chore: scaffold pnpm monorepo"
 ### Task 2: Core types and bundle builder
 
 **Files:**
+
 - Create: `packages/core/package.json`
 - Create: `packages/core/tsconfig.json`
 - Create: `packages/core/tsconfig.test.json`
@@ -171,6 +174,7 @@ git commit -m "chore: scaffold pnpm monorepo"
 - Create: `packages/core/test/builder.test.ts`
 
 **Interfaces:**
+
 - Produces:
   - `QaRunBundle`, `QaStep`, `QaAsset`, `QaGuideOptions`, `QaStepInput`, `QaAssetInput` types
   - `createBundleBuilder(): BundleBuilder`
@@ -233,7 +237,10 @@ test('createBundleBuilder accumulates steps and assets', () => {
   assert.equal(bundle.meta.source?.runner, 'playwright');
   assert.equal(bundle.steps.length, 1);
   assert.equal(step.index, 1);
-  assert.equal(bundle.assets['step-01-screenshot'].filename, 'step-01-screenshot.png');
+  assert.equal(
+    bundle.assets['step-01-screenshot'].filename,
+    'step-01-screenshot.png',
+  );
   assert.equal(builder.pendingAssets().length, 1);
 });
 ```
@@ -429,11 +436,13 @@ git commit -m "feat(core): add bundle model and builder"
 ### Task 3: Core renderers
 
 **Files:**
+
 - Create: `packages/core/src/render/index.ts`
 - Modify: `packages/core/src/index.ts`
 - Create: `packages/core/test/render.test.ts`
 
 **Interfaces:**
+
 - Consumes: `QaRunBundle` from Task 2
 - Produces:
   - `renderQaSteps(bundle: QaRunBundle): string`
@@ -572,11 +581,13 @@ git commit -m "feat(core): add qa-steps and json renderers"
 ### Task 4: Core bundle I/O
 
 **Files:**
+
 - Create: `packages/core/src/bundle/io.ts`
 - Modify: `packages/core/src/index.ts`
 - Create: `packages/core/test/io.test.ts`
 
 **Interfaces:**
+
 - Consumes: `QaRunBundle`, `QaAssetInput` from Task 2
 - Produces:
   - `writeBundle(dir: string, bundle: QaRunBundle, assets: QaAssetInput[]): Promise<void>`
@@ -602,7 +613,10 @@ test('writeBundle and readBundle round-trip', async () => {
   try {
     const builder = createBundleBuilder();
     builder.guide({ title: 'Login' });
-    builder.addStep({ action: 'Open /login', assetIds: ['step-01-screenshot'] });
+    builder.addStep({
+      action: 'Open /login',
+      assetIds: ['step-01-screenshot'],
+    });
     builder.addAsset({
       id: 'step-01-screenshot',
       contentType: 'image/png',
@@ -718,12 +732,14 @@ git commit -m "feat(core): add bundle read/write I/O"
 ### Task 5: Playwright qa fixture
 
 **Files:**
+
 - Create: `packages/playwright/package.json`
 - Create: `packages/playwright/tsconfig.json`
 - Create: `packages/playwright/src/fixture.ts`
 - Create: `packages/playwright/src/index.ts`
 
 **Interfaces:**
+
 - Consumes: `createBundleBuilder`, `BundleBuilder` from `@qa-instructions/core`
 - Produces:
   - `test` — extended Playwright test with `qa` fixture
@@ -889,10 +905,12 @@ git commit -m "feat(playwright): add qa fixture with step.attach capture"
 ### Task 6: Playwright collector reporter
 
 **Files:**
+
 - Create: `packages/playwright/src/reporter/collector.ts`
 - Create: `packages/playwright/test/collector.test.ts`
 
 **Interfaces:**
+
 - Consumes: `writeBundle`, `bundleDirName`, `QaRunBundle`, `QaAssetInput` from `@qa-instructions/core`
 - Produces: default export `QaCollectorReporter` class implementing Playwright `Reporter`
 - Options: `{ outputDir?: string }` defaulting to `'qa-runs'`
@@ -950,8 +968,14 @@ test('collector writes bundle dir from attachments', async () => {
     const reporter = new QaCollectorReporter({} as never, { outputDir: out });
     const bundle = {
       version: '1',
-      meta: { title: 'Login', capturedAt: new Date().toISOString(), status: 'complete' },
-      steps: [{ index: 1, action: 'Open /login', assetIds: ['step-01-screenshot'] }],
+      meta: {
+        title: 'Login',
+        capturedAt: new Date().toISOString(),
+        status: 'complete',
+      },
+      steps: [
+        { index: 1, action: 'Open /login', assetIds: ['step-01-screenshot'] },
+      ],
       assets: {
         'step-01-screenshot': {
           id: 'step-01-screenshot',
@@ -972,7 +996,12 @@ test('collector writes bundle dir from attachments', async () => {
     assert.match(raw, /"title": "Login"/);
 
     const png = await readFile(
-      path.join(out, 'login--user-can-log-in', 'assets', 'step-01-screenshot.png'),
+      path.join(
+        out,
+        'login--user-can-log-in',
+        'assets',
+        'step-01-screenshot.png',
+      ),
     );
     assert.equal(png.toString(), 'png-bytes');
   } finally {
@@ -1023,7 +1052,10 @@ type CollectorOptions = {
   outputDir?: string;
 };
 
-function collectAssets(result: TestResult, bundle: QaRunBundle): QaAssetInput[] {
+function collectAssets(
+  result: TestResult,
+  bundle: QaRunBundle,
+): QaAssetInput[] {
   const assets: QaAssetInput[] = [];
   const declaredIds = new Set(
     bundle.steps.flatMap((step) => step.assetIds ?? []),
@@ -1096,12 +1128,14 @@ git commit -m "feat(playwright): add collector reporter"
 ### Task 7: CLI render command
 
 **Files:**
+
 - Create: `packages/cli/package.json`
 - Create: `packages/cli/tsconfig.json`
 - Create: `packages/cli/src/index.ts`
 - Create: `packages/cli/test/render.test.ts`
 
 **Interfaces:**
+
 - Consumes: `readBundle`, `render`, `RenderFormat` from `@qa-instructions/core`
 - Produces: CLI `qa-instructions render <dir> --format qa-steps|json --out <dir>`
 
@@ -1123,7 +1157,10 @@ test('findBundles discovers bundle directories', async () => {
   try {
     const bundleDir = path.join(root, 'login--user-can-log-in');
     await mkdir(bundleDir, { recursive: true });
-    await writeFile(path.join(bundleDir, 'bundle.json'), '{"version":"1","meta":{"title":"Login","capturedAt":"2026-01-01T00:00:00.000Z","status":"complete"},"steps":[],"assets":{}}');
+    await writeFile(
+      path.join(bundleDir, 'bundle.json'),
+      '{"version":"1","meta":{"title":"Login","capturedAt":"2026-01-01T00:00:00.000Z","status":"complete"},"steps":[],"assets":{}}',
+    );
 
     const found = await findBundles(root);
     assert.equal(found.length, 1);
@@ -1318,11 +1355,13 @@ git commit -m "feat(cli): add render command"
 ### Task 8: Example project — collect → render loop
 
 **Files:**
+
 - Create: `examples/basic/package.json`
 - Create: `examples/basic/playwright.config.ts`
 - Create: `examples/basic/tests/example.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `@qa-instructions/playwright`, `@qa-instructions/cli`, `@qa-instructions/core`
 - Produces: working end-to-end demo against `https://playwright.dev`
 
@@ -1382,18 +1421,16 @@ test('Browse Playwright docs', async ({ qa, page }) => {
     'Homepage loads with Get started link visible',
     async () => {
       await page.goto('https://playwright.dev');
-      await expect(page.getByRole('link', { name: 'Get started' })).toBeVisible();
+      await expect(
+        page.getByRole('link', { name: 'Get started' }),
+      ).toBeVisible();
     },
   );
 
-  await qa.step(
-    'Click `Get started`',
-    'Lands on intro docs page',
-    async () => {
-      await page.getByRole('link', { name: 'Get started' }).click();
-      await expect(page).toHaveURL(/.*intro/);
-    },
-  );
+  await qa.step('Click `Get started`', 'Lands on intro docs page', async () => {
+    await page.getByRole('link', { name: 'Get started' }).click();
+    await expect(page).toHaveURL(/.*intro/);
+  });
 });
 ```
 
@@ -1423,14 +1460,17 @@ git commit -m "feat(example): add collect-to-render demo"
 ### Task 9: README and success validation
 
 **Files:**
+
 - Create: `README.md`
 
 **Interfaces:**
+
 - Produces: documentation for install, usage, CI pattern
 
 - [ ] **Step 1: Write README**
 
 Document:
+
 - Architecture diagram (collect → bundle → render)
 - Three-package layout
 - Test authoring with `qa.step()`
@@ -1466,20 +1506,20 @@ git commit -m "docs: add README and validate success criteria"
 
 ### Spec coverage
 
-| Spec requirement | Task |
-|-----------------|------|
-| QaRunBundle canonical model | Task 2 |
-| Bundle on-disk layout | Task 4 |
-| renderQaSteps + renderJson | Task 3 |
-| Playwright qa fixture with step.attach | Task 5 |
-| Collector reporter (no render) | Task 6 |
-| CLI separate render step | Task 7 |
-| Explicit qa.step authoring | Task 5, 8 |
-| Retry: last attempt bundle | Task 6 (reverse attachments) |
-| Partial capture on failure | Task 5 (setStatus partial) |
-| Example collect → render | Task 8 |
-| Success criteria validation | Task 9 |
-| Out of scope items excluded | Global Constraints |
+| Spec requirement                       | Task                         |
+| -------------------------------------- | ---------------------------- |
+| QaRunBundle canonical model            | Task 2                       |
+| Bundle on-disk layout                  | Task 4                       |
+| renderQaSteps + renderJson             | Task 3                       |
+| Playwright qa fixture with step.attach | Task 5                       |
+| Collector reporter (no render)         | Task 6                       |
+| CLI separate render step               | Task 7                       |
+| Explicit qa.step authoring             | Task 5, 8                    |
+| Retry: last attempt bundle             | Task 6 (reverse attachments) |
+| Partial capture on failure             | Task 5 (setStatus partial)   |
+| Example collect → render               | Task 8                       |
+| Success criteria validation            | Task 9                       |
+| Out of scope items excluded            | Global Constraints           |
 
 ### Placeholder scan
 

@@ -6,13 +6,13 @@
 
 ### Capture — worker process
 
-| API | Purpose |
-|-----|---------|
-| `test.extend({ qa })` | Fixture: setup → `use()` → teardown |
-| `test.step(title, fn)` | Step tree; `fn` receives `TestStepInfo` |
-| `step.attach(name, { body, contentType })` | Per-step artifacts (requires ≥1.51) |
-| `testInfo.attach(name, { body })` | Test-level artifacts (bundle JSON) |
-| `page.screenshot()` | Capture primitive |
+| API                                        | Purpose                                 |
+| ------------------------------------------ | --------------------------------------- |
+| `test.extend({ qa })`                      | Fixture: setup → `use()` → teardown     |
+| `test.step(title, fn)`                     | Step tree; `fn` receives `TestStepInfo` |
+| `step.attach(name, { body, contentType })` | Per-step artifacts (requires ≥1.51)     |
+| `testInfo.attach(name, { body })`          | Test-level artifacts (bundle JSON)      |
+| `page.screenshot()`                        | Capture primitive                       |
 
 ### Collection — main process (`Reporter`)
 
@@ -22,13 +22,14 @@ interface Reporter {
   onTestBegin?(test: TestCase, result: TestResult): void;
   onStepBegin?(test: TestCase, result: TestResult, step: TestStep): void;
   onStepEnd?(test: TestCase, result: TestResult, step: TestStep): void;
-  onTestEnd?(test: TestCase, result: TestResult): void;  // ← collector hook
-  onEnd?(result: FullResult): Promise<void>;              // awaited
-  onExit?(): Promise<void>;                               // awaited
+  onTestEnd?(test: TestCase, result: TestResult): void; // ← collector hook
+  onEnd?(result: FullResult): Promise<void>; // awaited
+  onExit?(): Promise<void>; // awaited
 }
 ```
 
 **`TestResult` fields used by collector:**
+
 - `attachments[]` — `{ name, contentType, body?, path? }`; use last `qa-run-bundle` on retry
 - `steps[]` — tree; filter `step.category === 'test.step'`; read `step.attachments`
 

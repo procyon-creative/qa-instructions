@@ -5,10 +5,29 @@
   "scripts": {
     "build": "pnpm -r build",
     "test": "pnpm -r test",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "prepare": "husky",
     "example": "pnpm --filter @qa-instructions/example-basic test",
     "example:render": "pnpm --filter @qa-instructions/example-basic render"
   },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": "prettier --write"
+  },
   "devDependencies": {
-    "typescript": "^5.7.0"
+    "@commitlint/cli": "^21.0.1",
+    "@commitlint/config-conventional": "^21.0.1",
+    "@eslint/js": "^9.39.0",
+    "eslint": "^9.39.0",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.6.2",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.48.0"
   }
 }

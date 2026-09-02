@@ -18,11 +18,11 @@ See [docs/design.md](./docs/design.md) for the full spec.
 
 ## Packages
 
-| Package | Role |
-|---------|------|
-| `@qa-instructions/core` | Bundle model, builder, I/O, renderers |
-| `@qa-instructions/playwright` | `qa` fixture + collector reporter |
-| `@qa-instructions/cli` | `qa-instructions render` command |
+| Package                       | Role                                  |
+| ----------------------------- | ------------------------------------- |
+| `@qa-instructions/core`       | Bundle model, builder, I/O, renderers |
+| `@qa-instructions/playwright` | `qa` fixture + collector reporter     |
+| `@qa-instructions/cli`        | `qa-instructions render` command      |
 
 ## Usage
 
@@ -42,7 +42,9 @@ test('Create a project', async ({ qa, page }) => {
     'Project list loads with no error',
     async () => {
       await page.goto('https://app.example.com/projects');
-      await expect(page.getByRole('heading', { name: 'Projects' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: 'Projects' }),
+      ).toBeVisible();
     },
   );
 });

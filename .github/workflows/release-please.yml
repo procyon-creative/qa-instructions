@@ -1,0 +1,31 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**/*.md', 'docs/**']
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v5
+        id: release
+        with:
+          release-type: node
+
+      - uses: procyon-creative/jira-action-man@v2
+        if: ${{ steps.release.outputs.release_created }}
+        id: jira
+        with:
+          projects: 'QI'
+          from: 'commits'
+          post_to_jira: true
+          jira_comment_mode: minimal
+          jira_base_url: ${{ secrets.JIRA_BASE_URL }}
+          jira_email: ${{ secrets.JIRA_EMAIL }}
+          jira_api_token: ${{ secrets.JIRA_API_TOKEN }}
