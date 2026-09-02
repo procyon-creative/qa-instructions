@@ -1,0 +1,7 @@
+node_modules/
+dist/
+dist-test/
+qa-runs/
+qa-steps-out/
+playwright-report/
+test-results/
