@@ -207,6 +207,8 @@ test('Create a project', async ({ qa, page }) => {
 
 docs-tests couples capture + Markdown render in one reporter pass. qa-instructions separates collection from render so the same run produces ticket steps, Markdown, or future formats without re-running tests. Output contract targets qa-steps skill format (terse, falsifiable, prerequisite line) rather than product documentation prose.
 
+See [research/2026-03-27-competitive-and-api-research.md](./research/2026-03-27-competitive-and-api-research.md) (primary-source citations), [competitive-landscape.md](./competitive-landscape.md) (summary), and [framework-hooks.md](./framework-hooks.md) (quick API reference).
+
 ## Package layout
 
 ```
