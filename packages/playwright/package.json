@@ -1,0 +1,25 @@
+{
+  "name": "@qa-instructions/playwright",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js",
+    "./collector": "./dist/reporter/collector.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",
+    "test": "node --test dist-test/**/*.test.js"
+  },
+  "dependencies": {
+    "@qa-instructions/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "@playwright/test": ">=1.51.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.51.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  },
+  "files": ["dist"]
+}
