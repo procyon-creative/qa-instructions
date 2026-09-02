@@ -66,11 +66,26 @@ export default class QaCollectorReporter implements Reporter {
       bundleAttachment.body.toString('utf8'),
     ) as QaRunBundle;
 
+    const assets = collectAssets(result, bundle);
+    const bundleWithAssets: QaRunBundle = {
+      ...bundle,
+      assets: Object.fromEntries(
+        assets.map((asset) => [
+          asset.id,
+          {
+            id: asset.id,
+            contentType: asset.contentType,
+            filename: asset.filename,
+          },
+        ]),
+      ),
+    };
+
     const dir = path.join(
       this.outputDir,
       bundleDirName(test.location.file, test.title),
     );
     await mkdir(dir, { recursive: true });
-    await writeBundle(dir, bundle, collectAssets(result, bundle));
+    await writeBundle(dir, bundleWithAssets, assets);
   }
 }

@@ -38,7 +38,6 @@ function createQaFixture(
     async step(action, expected, fn) {
       stepCounter += 1;
       const assetId = `step-${String(stepCounter).padStart(2, '0')}-screenshot`;
-      const filename = `${assetId}.png`;
 
       await base.step(action, async (step) => {
         try {
@@ -47,12 +46,6 @@ function createQaFixture(
           await step.attach('qa-screenshot', {
             body: screenshot,
             contentType: 'image/png',
-          });
-          builder.addAsset({
-            id: assetId,
-            contentType: 'image/png',
-            filename,
-            data: Buffer.from(screenshot),
           });
           builder.addStep({
             action,

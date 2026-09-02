@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "playwright test",
-    "render": "node ../../packages/cli/dist/index.js render qa-runs --format qa-steps --out qa-steps-out"
+    "render": "qa-instructions render qa-runs --format qa-steps --out qa-steps-out"
   },
   "devDependencies": {
     "@qa-instructions/cli": "workspace:*",

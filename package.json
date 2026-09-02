@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r build",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "example": "pnpm --filter @qa-instructions/example-basic test",
+    "example:render": "pnpm --filter @qa-instructions/example-basic render"
   },
   "devDependencies": {
     "typescript": "^5.7.0"
