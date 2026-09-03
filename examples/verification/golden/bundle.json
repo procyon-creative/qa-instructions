@@ -5,7 +5,7 @@
     "status": "complete",
     "source": {
       "runner": "playwright",
-      "testFile": "/Users/nick/code/qa-instructions/examples/verification/tests/capture.spec.ts",
+      "testFile": "examples/verification/tests/capture.spec.ts",
       "testTitle": "Login error flow",
       "project": ""
     },

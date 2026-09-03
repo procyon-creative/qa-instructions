@@ -11,6 +11,13 @@ const goldenDir = path.join(root, 'golden');
 function normalizeBundle(raw) {
   const bundle = structuredClone(raw);
   delete bundle.meta.capturedAt;
+  if (bundle.meta.source?.testFile) {
+    const file = bundle.meta.source.testFile.replace(/\\/g, '/');
+    const marker = 'examples/verification/tests/';
+    const idx = file.indexOf(marker);
+    bundle.meta.source.testFile =
+      idx >= 0 ? file.slice(idx) : path.basename(file);
+  }
   for (const step of bundle.steps) {
     if (step.url) {
       step.url = step.url.replace(/^https?:\/\/[^/]+/, 'http://127.0.0.1:4321');
