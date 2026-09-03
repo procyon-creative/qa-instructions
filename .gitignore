@@ -1,6 +1,7 @@
 node_modules/
 dist/
 dist-test/
+.astro/
 qa-runs/
 qa-steps-out/
 playwright-report/

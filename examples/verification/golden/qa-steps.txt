@@ -1,0 +1,5 @@
+Fixture app running at http://127.0.0.1:4321
+
+1. Open the fixture app home page — Blue STEP 1 HOME marker is visible
+2. Click Sign in — Orange STEP 2 LOGIN marker and credential form are visible
+3. Submit bad credentials — Red error banner and STEP 3 ERROR marker are visible

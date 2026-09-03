@@ -9,7 +9,8 @@
     "format": "prettier --write .",
     "prepare": "husky",
     "example": "pnpm --filter @qa-instructions/example-basic test",
-    "example:render": "pnpm --filter @qa-instructions/example-basic render"
+    "example:render": "pnpm --filter @qa-instructions/example-basic render",
+    "verify": "pnpm --filter @qa-instructions/example-verification e2e"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

@@ -72,21 +72,25 @@ Paste `qa-steps-out/*.txt` into your ticket. Screenshots stay in `qa-runs/` and 
 
 ## CI
 
-```yaml
-- run: pnpm test
-- run: qa-instructions render qa-runs/ --format qa-steps --out qa-steps-out/
-- uses: actions/upload-artifact@v4
-  with:
-    name: qa-steps
-    path: qa-steps-out/
-```
-
-## Example
+E2E on `main` runs the verification example (local fixture site + golden checks):
 
 ```bash
-cd examples/basic
-pnpm install
-pnpm exec playwright install chromium
-pnpm test
-pnpm render
+pnpm --filter @qa-instructions/example-verification e2e
+```
+
+Unit CI runs `packages/*` tests only; Playwright browser tests stay in the E2E workflow.
+
+## Examples
+
+| Example                 | Purpose                                                        |
+| ----------------------- | -------------------------------------------------------------- |
+| `examples/verification` | Deterministic capture/render e2e with golden screenshot probes |
+| `examples/basic`        | Optional smoke against playwright.dev                          |
+
+```bash
+# Full pipeline verification (recommended)
+pnpm verify
+
+# External smoke only
+cd examples/basic && pnpm test && pnpm render
 ```

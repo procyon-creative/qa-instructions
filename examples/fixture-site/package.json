@@ -1,0 +1,13 @@
+{
+  "name": "@qa-instructions/fixture-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --host 127.0.0.1 --port 4321",
+    "build": "astro build",
+    "preview": "astro preview --host 127.0.0.1 --port 4321"
+  },
+  "devDependencies": {
+    "astro": "^5.7.0"
+  }
+}
