@@ -1,0 +1,65 @@
+---
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=800" />
+    <title>{title}</title>
+    <style>
+      :global(body) {
+        margin: 0;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        background: #f5f5f5;
+        color: #111;
+      }
+      main {
+        width: 720px;
+        margin: 24px auto;
+        padding: 24px;
+        background: #fff;
+        border: 2px solid #111;
+      }
+      .marker {
+        width: 200px;
+        height: 80px;
+        margin: 16px 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        font-weight: 700;
+        color: #fff;
+      }
+      .banner {
+        padding: 12px 16px;
+        margin: 16px 0;
+        font-weight: 700;
+      }
+      a.button,
+      button.button {
+        display: inline-block;
+        margin-top: 12px;
+        padding: 10px 16px;
+        background: #111;
+        color: #fff;
+        text-decoration: none;
+      }
+      button.button {
+        border: none;
+        cursor: pointer;
+        font: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <slot />
+    </main>
+  </body>
+</html>

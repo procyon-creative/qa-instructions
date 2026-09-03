@@ -1,0 +1,54 @@
+{
+  "version": "1",
+  "meta": {
+    "title": "Login error flow",
+    "status": "complete",
+    "source": {
+      "runner": "playwright",
+      "testFile": "/Users/nick/code/qa-instructions/examples/verification/tests/capture.spec.ts",
+      "testTitle": "Login error flow",
+      "project": ""
+    },
+    "prerequisite": "Fixture app running at http://127.0.0.1:4321"
+  },
+  "steps": [
+    {
+      "index": 1,
+      "action": "Open the fixture app home page",
+      "expected": "Blue STEP 1 HOME marker is visible",
+      "url": "http://127.0.0.1:4321/",
+      "assetIds": ["step-01-screenshot"]
+    },
+    {
+      "index": 2,
+      "action": "Click Sign in",
+      "expected": "Orange STEP 2 LOGIN marker and credential form are visible",
+      "url": "http://127.0.0.1:4321/login",
+      "assetIds": ["step-02-screenshot"]
+    },
+    {
+      "index": 3,
+      "action": "Submit bad credentials",
+      "expected": "Red error banner and STEP 3 ERROR marker are visible",
+      "url": "http://127.0.0.1:4321/login-error?username=&password=",
+      "assetIds": ["step-03-screenshot"]
+    }
+  ],
+  "assets": {
+    "step-01-screenshot": {
+      "id": "step-01-screenshot",
+      "contentType": "image/png",
+      "filename": "step-01-screenshot.png"
+    },
+    "step-02-screenshot": {
+      "id": "step-02-screenshot",
+      "contentType": "image/png",
+      "filename": "step-02-screenshot.png"
+    },
+    "step-03-screenshot": {
+      "id": "step-03-screenshot",
+      "contentType": "image/png",
+      "filename": "step-03-screenshot.png"
+    }
+  }
+}

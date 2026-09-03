@@ -1,0 +1,19 @@
+{
+  "name": "@qa-instructions/example-verification",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "render": "node ../../packages/cli/dist/index.js render qa-runs --format qa-steps --out qa-steps-out",
+    "verify": "node scripts/verify-run.mjs",
+    "verify:update-goldens": "node scripts/update-goldens.mjs",
+    "e2e": "pnpm test && pnpm render && pnpm verify"
+  },
+  "devDependencies": {
+    "@qa-instructions/cli": "workspace:*",
+    "@qa-instructions/fixture-site": "workspace:*",
+    "@qa-instructions/playwright": "workspace:*",
+    "@playwright/test": "^1.51.0",
+    "pngjs": "^7.0.0"
+  }
+}

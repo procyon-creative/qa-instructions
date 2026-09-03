@@ -1,0 +1,21 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base title="Login Error">
+  <h1>Login failed</h1>
+  <div
+    class="banner"
+    data-testid="error-banner"
+    style="background: #cc0000; color: #fff"
+  >
+    Invalid credentials
+  </div>
+  <div
+    class="marker"
+    data-testid="step-marker"
+    data-step="login-error"
+    style="background: #cc0000"
+  >
+    STEP 3 ERROR
+  </div>
+</Base>
