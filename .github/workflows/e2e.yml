@@ -1,6 +1,8 @@
 name: E2E
 
 # Deterministic fixture-site capture/render + golden verification (main only).
+# Runner: ubuntu-latest (public repo — hosted minutes free). Switch to
+# [self-hosted, linux] on ruby when org limits require it; see docs/ci.md.
 on:
   push:
     branches: [main]

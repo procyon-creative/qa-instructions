@@ -1,0 +1,71 @@
+# CI and runners
+
+## GitHub-hosted (current default)
+
+`procyon-creative/qa-instructions` is **public**, so Linux hosted runners are free. CI and E2E use `ubuntu-latest` today.
+
+| Workflow                         | Runner          | When                      |
+| -------------------------------- | --------------- | ------------------------- |
+| `ci.yml`                         | `ubuntu-latest` | Every PR + push to `main` |
+| `e2e.yml`                        | `ubuntu-latest` | Push to `main` only       |
+| `jira.yml`, `release-please.yml` | `ubuntu-latest` | Events as configured      |
+
+## Self-hosted on `ruby`
+
+Use the homelab runner on **`ruby`** when hosted Actions are not enough:
+
+- Private repos under `procyon-creative` (hosted minutes bill the org)
+- Jobs that need heavy Playwright/browser caches, Docker, or long runtimes
+- Anything blocked on the org's free hosted quota
+
+**Do not** attach a repo-scoped self-hosted runner to a **public** repo unless jobs are restricted to trusted refs only (e.g. push to `main` from upstream, not fork PRs). Fork PRs can execute workflow code on the host.
+
+### Pattern (from `resume-builder`)
+
+```yaml
+jobs:
+  e2e:
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      # …
+```
+
+### Provision a runner
+
+Private repo only. See `add-self-hosted-runner` skill:
+
+- Host: `ruby`
+- Container: `gh-runner-<owner>-<repo>`
+- Labels: `self-hosted,linux`
+- Env: `/etc/gh-runner/<owner>-<repo>.env`
+
+Registration (one-time):
+
+```bash
+gh api -X POST repos/<owner>/<repo>/actions/runners/registration-token --jq .token
+# → set RUNNER_TOKEN in env file, start container on ruby
+```
+
+### Switching this repo to `ruby`
+
+When needed (e.g. repo goes private or org minute limits bite):
+
+1. Provision runner on `ruby` for the target repo (private).
+2. Change `runs-on` in `.github/workflows/e2e.yml` (and optionally `ci.yml`) to `[self-hosted, linux]`.
+3. For public repos, gate self-hosted jobs:
+
+   ```yaml
+   if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+   ```
+
+   so fork PRs stay on `ubuntu-latest`.
+
+## Local verification
+
+Before push (saves hosted/self-hosted cycles):
+
+```bash
+pnpm verify   # examples/verification: test → render → golden probes
+```

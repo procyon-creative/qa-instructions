@@ -3,7 +3,16 @@
 ## This repo
 
 - **qa-instructions** — npm monorepo, Playwright-first, collect → render architecture
-- Issue tracker: none yet (local git only)
+
+## Issue tracker
+
+- Jira **QI** — https://procyoncreative.atlassian.net/jira/software/c/projects/QI/boards
+- GitHub: https://github.com/procyon-creative/qa-instructions (canonical), fork on `nicolasgalvez` for day-to-day work
+
+## CI / runners
+
+- **Public repo** → GitHub-hosted `ubuntu-latest` is free; CI + E2E use that today.
+- **Ruby homelab** → use self-hosted `[self-hosted, linux]` on host `ruby` when procyon-creative hosted quota isn't enough (private repos, heavy Playwright, long jobs). See `docs/ci.md` and `add-self-hosted-runner` skill. Never bind a public repo runner to fork PRs without gating.
 - QA steps destination: Jira/ticket fields (plain text, not markdown)
 
 ## Tools in play
