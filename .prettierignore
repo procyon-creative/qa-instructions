@@ -6,3 +6,5 @@ qa-steps-out/
 playwright-report/
 test-results/
 pnpm-lock.yaml
+.claude/skills/
+skills-lock.json

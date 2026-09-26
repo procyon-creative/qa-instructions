@@ -11,8 +11,13 @@ export default tseslint.config(
       '**/dist/**',
       '**/dist-test/**',
       '**/node_modules/**',
+      '.claude/skills/**',
       '**/.astro/**',
       'examples/**/scripts/**',
     ],
+  },
+  {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: { globals: { process: 'readonly', console: 'readonly' } },
   },
 );
