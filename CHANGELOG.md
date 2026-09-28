@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.0.0](https://github.com/procyon-creative/qa-instructions/compare/v2.0.0...v3.0.0) (2026-09-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* @qa-instructions/core, @qa-instructions/playwright, and @qa-instructions/cli are replaced by @procyon-creative/qa-instructions. Import the reporter from '@procyon-creative/qa-instructions/playwright' instead of '@qa-instructions/playwright/reporter'.
+
+### Bug Fixes
+
+* **ci:** don't parse the release PR when release-please opened none ([dee1c5b](https://github.com/procyon-creative/qa-instructions/commit/dee1c5b59db0cc05361df28e941b0e2d3842e50d))
+* **ci:** don't parse the release PR when release-please opened none ([a374b0f](https://github.com/procyon-creative/qa-instructions/commit/a374b0fda29fb257168a222ffac085b97bb09e80))
+
+
+### Code Refactoring
+
+* ship one package, @procyon-creative/qa-instructions ([f1c29d6](https://github.com/procyon-creative/qa-instructions/commit/f1c29d660801c2ac6d0281baf460c80e09c8454b))
+
 ## [2.0.0](https://github.com/procyon-creative/qa-instructions/compare/v1.0.0...v2.0.0) (2026-09-28)
 
 
