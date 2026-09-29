@@ -23,11 +23,17 @@ Neither workflow uses `paths-ignore` on `pull_request`. A required check that ne
 
 ## Releases
 
-`release-please.yml` runs on every push to `main` (upstream only; forks skip it). release-please runs in manifest mode (`release-please-config.json`, `.release-please-manifest.json`) and versions only `packages/qa-instructions`: `feat:`/`fix:` merges open or refresh a release PR that bumps the package's `package.json` and writes `packages/qa-instructions/CHANGELOG.md`. Merging the release PR tags `vX.Y.Z`, creates the GitHub release, publishes `@procyon-creative/qa-instructions` to npm with OIDC trusted publishing (no npm token), and posts the release to Jira.
+A release happens when `version` in `packages/qa-instructions/package.json` changes on `main` to a version that has no `vX.Y.Z` tag yet. To cut one, bump `version` in a PR and merge it.
+
+`release-please.yml` runs on pushes to `main` that touch that `package.json` (upstream only; forks skip it). It reads `version` and checks for the `v<version>` tag. If the tag exists, the run does nothing, so dependency-only edits and re-runs are no-ops. Otherwise it builds and publishes `@procyon-creative/qa-instructions` to npm with OIDC trusted publishing (no npm token), tags `vX.Y.Z` and creates the GitHub release with generated notes, and posts the release to Jira. It publishes before tagging, so a failed publish leaves no tag and re-running the job retries it. Pushes that don't touch the file never start the workflow.
+
+Release notes after 3.0.0 live on [GitHub Releases](https://github.com/procyon-creative/qa-instructions/releases); `packages/qa-instructions/CHANGELOG.md` covers 3.0.0 and earlier.
+
+The workflow keeps its `release-please.yml` filename although release-please is gone: npm trusted publishing is bound to it. Renaming the file breaks publishing until a maintainer re-runs `npm trust` below with the new name.
 
 ### One-time npm setup (maintainer)
 
-Trusted publishing needs the package to exist on npm first. Do this before merging the next release PR:
+Trusted publishing needs the package to exist on npm first. Do this before the first automated release:
 
 ```bash
 npm login
@@ -36,7 +42,7 @@ cd packages/qa-instructions && npm publish --access public
 npm trust github @procyon-creative/qa-instructions --file release-please.yml --repo procyon-creative/qa-instructions
 ```
 
-`npm trust` prompts for 2FA. After that, every merged release PR publishes on its own.
+`npm trust` prompts for 2FA. After that, every version bump merged to `main` publishes on its own.
 
 ## Self-hosted on `ruby`
 
