@@ -78,7 +78,8 @@ export type QaInstructionsReporterOptions = {
    * `every`, or `none`; or `{ steps, overrides }`, where each override
    * `{ match, screenshots }` chooses `action`, `result`, or `both` for the
    * steps whose text contains `match` (a string) or matches it (a RegExp).
-   * Playwright 1.63+ only for now.
+   * On Playwright 1.53–1.62 a step gets one only when a frame of the screen
+   * recording is known to show its result.
    */
   resultScreenshots?: ResultScreenshotOptions;
   /**
