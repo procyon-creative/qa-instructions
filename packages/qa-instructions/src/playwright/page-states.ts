@@ -203,6 +203,35 @@ export class PageStates {
   }
 
   /**
+   * How long the page stayed as recorded at the named snapshot (its DOM,
+   * form values, and scroll offsets), provided every later snapshot taken
+   * before `until` still records it so: when it was first recorded so
+   * (`since`), and when the last snapshot before `until` was taken
+   * (`lastSeen`). Undefined without that snapshot, or if the page changed
+   * before `until`.
+   */
+  heldUntil(
+    pageId: string | undefined,
+    snapshotName: string,
+    until: number,
+  ): { since: number; lastSeen: number } | undefined {
+    if (pageId === undefined) return undefined;
+    // In the order the snapshots were recorded.
+    const moments = this.moments.get(pageId) ?? [];
+    const at = moments.findIndex((m) => m.name === snapshotName);
+    if (at < 0) return undefined;
+    const dom = this.pageState(moments[at]).dom;
+    let lastSeen = moments[at].time;
+    for (const moment of moments.slice(at + 1)) {
+      if (moment.time >= until) break;
+      if (this.pageState(moment).dom !== dom) return undefined;
+      lastSeen = moment.time;
+    }
+    const since = this.unchangedSince(pageId, snapshotName) ?? lastSeen;
+    return { since, lastSeen };
+  }
+
+  /**
    * When the page's DOM, form values, and scroll offsets were first recorded
    * as they are at the named snapshot, unchanged through it (ignoring which
    * element Playwright marked as a call's target).
