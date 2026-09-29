@@ -13,7 +13,7 @@ permissions:
   id-token: write # npm trusted publishing (OIDC)
 
 concurrency:
-  group: release
+  group: ${{ github.workflow }}
   cancel-in-progress: false
 
 env:
@@ -24,6 +24,7 @@ jobs:
   release:
     if: github.repository_owner == 'procyon-creative'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
 
@@ -31,10 +32,11 @@ jobs:
       # on the tag, not on "the file changed", makes dependency-only edits and
       # re-runs of an already released version no-ops.
       - name: Decide whether to release
-        id: version
+        id: release_check
         run: |
           version="$(jq -r .version "$PACKAGE_DIR/package.json")"
           tag="v$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           # --exit-code: 0 = tag found, 2 = no such tag, anything else = error.
           status=0
@@ -48,44 +50,46 @@ jobs:
           esac
 
       - uses: pnpm/action-setup@v6
-        if: steps.version.outputs.release == 'true'
+        if: steps.release_check.outputs.release == 'true'
         with:
           version: 9
 
       - uses: actions/setup-node@v7
-        if: steps.version.outputs.release == 'true'
+        if: steps.release_check.outputs.release == 'true'
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
 
       - run: pnpm install --frozen-lockfile
-        if: steps.version.outputs.release == 'true'
+        if: steps.release_check.outputs.release == 'true'
 
       - run: pnpm --filter "$PACKAGE_NAME" build
-        if: steps.version.outputs.release == 'true'
+        if: steps.release_check.outputs.release == 'true'
 
       # Publish before tagging so a failed publish leaves no tag and a re-run
       # retries it. Skip if a previous attempt already published this version.
       - name: Publish to npm
-        if: steps.version.outputs.release == 'true'
+        if: steps.release_check.outputs.release == 'true'
         env:
-          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.release_check.outputs.version }}
         run: |
-          if npm view "$PACKAGE_NAME@${TAG#v}" version > /dev/null 2>&1; then
-            echo "$PACKAGE_NAME@${TAG#v} is already on npm."
-          else
-            pnpm --filter "$PACKAGE_NAME" publish --access public --no-git-checks
-          fi
+          status="$(curl -s -o /dev/null -w '%{http_code}' "https://registry.npmjs.org/$PACKAGE_NAME/$VERSION")"
+          case "$status" in
+            200) echo "$PACKAGE_NAME@$VERSION is already on npm." ;;
+            404) pnpm --filter "$PACKAGE_NAME" publish --access public --no-git-checks ;;
+            *) echo "npm registry answered HTTP $status for $PACKAGE_NAME@$VERSION." >&2
+               exit 1 ;;
+          esac
 
       - name: Tag and create the GitHub release
-        if: steps.version.outputs.release == 'true'
+        if: steps.release_check.outputs.release == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.version.outputs.tag }}
+          TAG: ${{ steps.release_check.outputs.tag }}
         run: gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --generate-notes
 
       - uses: procyon-creative/jira-action-man@v2
-        if: steps.version.outputs.release == 'true'
+        if: steps.release_check.outputs.release == 'true'
         id: jira
         with:
           projects: 'QI'
