@@ -4,7 +4,7 @@
 
 Turn what an existing Playwright test already does into QA Instructions a person can follow by hand, without changing the test. The developer installs one package and adds one reporter to their Playwright config; every test run then produces QA Instructions per test, rendered to the chosen formats. A separate command re-renders saved bundles.
 
-The decisions and their alternatives are recorded in [ADR 0001](./adr/0001-reporter-derived-qa-steps.md) and [ADR 0002](./adr/0002-one-package-with-entry-points.md) (one package with entry points). Vocabulary (QA Instructions, QA Step, Action, Expected Result, Section, Step Screenshot, Highlight) is defined in [CONTEXT.md](../CONTEXT.md).
+The decisions and their alternatives are recorded in [ADR 0001](./adr/0001-reporter-derived-qa-steps.md) and [ADR 0002](./adr/0002-one-package-with-entry-points.md) (one package with entry points). Vocabulary (QA Instructions, QA Step, Action, Expected Result, Section, Step Screenshot, QA Report, Result Screenshot, Highlight) is defined in [CONTEXT.md](../CONTEXT.md).
 
 ## Setup
 
