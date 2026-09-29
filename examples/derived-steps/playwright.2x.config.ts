@@ -10,7 +10,7 @@ export default defineConfig(base, {
     ['list'],
     [
       '@procyon-creative/qa-instructions/playwright',
-      { outputFolder: 'qa-report/2x' },
+      { outputFolder: 'qa-report/2x', open: 'never' },
     ],
   ],
   use: { deviceScaleFactor: 2 },

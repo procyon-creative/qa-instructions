@@ -44,6 +44,7 @@
     "domutils": "^3.2.2",
     "fflate": "^0.8.3",
     "minimatch": "^10.2.6",
+    "open": "^10.2.0",
     "sharp": "^0.35.4"
   },
   "peerDependencies": {

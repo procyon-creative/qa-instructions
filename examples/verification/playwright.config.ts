@@ -9,7 +9,8 @@ export default defineConfig({
     ['list'],
     ['html', { open: 'never' }],
     // Only the reporter line: the run writes the QA Report to qa-report/.
-    ['@procyon-creative/qa-instructions/playwright'],
+    // Like the html reporter above, it is never opened in a browser.
+    ['@procyon-creative/qa-instructions/playwright', { open: 'never' }],
   ],
   use: {
     baseURL,

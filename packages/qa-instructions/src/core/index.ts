@@ -84,6 +84,11 @@ export {
   type QaReportTest,
 } from './report/index-view.js';
 export { QaReportIndexHtml } from './report/index-html.js';
+export { QaReportViewer, type BrowserOpener } from './report/viewer.js';
+export {
+  QaReportOpener,
+  type QaReportOpenConventions,
+} from './report/opener.js';
 export {
   render,
   renderQaSteps,

@@ -7,6 +7,11 @@ const baseURL = fixtureOrigin.url;
 // test accounts' email addresses.
 const mask = [/[\w.+-]+@qa\.example\.com/];
 
+// Never open the QA Report in a browser, even when a test fails: scripts
+// check this run. playwright.failing.config.ts keeps the default to check
+// that a CI run opens nothing.
+const open = 'never';
+
 /** One reporter per Highlight style, for the moving-UI test only. */
 const highlightStyles = [
   'outline',
@@ -25,15 +30,15 @@ export default defineConfig({
     // goldens are checked too.
     [
       '@procyon-creative/qa-instructions/playwright',
-      { mask, formats: ['markdown'] },
+      { mask, open, formats: ['markdown'] },
     ],
     [
       '@procyon-creative/qa-instructions/playwright',
-      { outputFolder: 'qa-report/collapse', testSteps: 'collapse', mask },
+      { outputFolder: 'qa-report/collapse', testSteps: 'collapse', mask, open },
     ],
     [
       '@procyon-creative/qa-instructions/playwright',
-      { outputFolder: 'qa-report/ignore', testSteps: 'ignore', mask },
+      { outputFolder: 'qa-report/ignore', testSteps: 'ignore', mask, open },
     ],
     ...highlightStyles.map(
       (highlight) =>
@@ -42,6 +47,7 @@ export default defineConfig({
           {
             outputFolder: `qa-report/styles/${highlight}`,
             highlight,
+            open,
             select: { files: ['moving-ui.spec.ts'] },
           },
         ] as const,

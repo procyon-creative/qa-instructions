@@ -14,10 +14,20 @@ export class PlaywrightOutputFolder {
 
   /** The folder's absolute path; `configFile` is `FullConfig.configFile`. */
   resolve(configFile: string | undefined): string {
-    const configDir = configFile ? path.dirname(configFile) : process.cwd();
-    if (this.configured) return path.resolve(configDir, this.configured);
+    return this.resolveFrom(
+      configFile ? path.dirname(configFile) : process.cwd(),
+    );
+  }
+
+  /**
+   * The folder's absolute path with `dir` in place of the config file's
+   * directory, as `playwright show-report` resolves its folder from the
+   * working directory.
+   */
+  resolveFrom(dir: string): string {
+    if (this.configured) return path.resolve(dir, this.configured);
     return path.resolve(
-      this.packageDir(configDir) ?? process.cwd(),
+      this.packageDir(dir) ?? process.cwd(),
       PlaywrightOutputFolder.DEFAULT,
     );
   }

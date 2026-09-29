@@ -2,6 +2,7 @@ import type {
   FullConfig,
   FullResult,
   Reporter,
+  Suite,
   TestCase,
   TestResult,
 } from '@playwright/test/reporter';
@@ -11,6 +12,8 @@ import {
   QaInstructionsRecorder,
   QaInstructionsRun,
   QaReport,
+  QaReportOpener,
+  QaReportViewer,
   SecretMasker,
   StaleBundlePolicy,
   StepScreenshotHighlighter,
@@ -24,7 +27,13 @@ import {
 } from '../core/index.js';
 
 import { AttemptTraces } from './attempt-traces.js';
+import { openInBrowser } from './browser.js';
 import { PlaywrightOutputFolder } from './output-folder.js';
+import {
+  isQaReportOpen,
+  QaReportOpenRule,
+  type QaReportOpen,
+} from './report-opening.js';
 import { ReporterLog } from './reporter-log.js';
 import { PlaywrightRunCoverage } from './run-coverage.js';
 import { SharpScreenshotAnnotator } from './sharp-screenshot-annotator.js';
@@ -68,6 +77,13 @@ export type QaInstructionsReporterOptions = {
    * screenshots), `json` (`qa-steps.json`). Default none.
    */
   formats?: RenderFormat[];
+  /**
+   * When to open the QA Report in a browser after the run, like Playwright's
+   * HTML reporter option: `always`, `never`, or `on-failure` (default, when
+   * any test failed or was flaky). It never opens on CI or with no one at
+   * the terminal.
+   */
+  open?: QaReportOpen;
 };
 
 /**
@@ -84,8 +100,13 @@ export default class QaInstructionsReporter implements Reporter {
   private readonly folder: PlaywrightOutputFolder;
   private readonly selection: TestSelection;
   private readonly formats: RenderFormat[];
+  private readonly opener: QaReportOpener;
   private advice = new TraceAdvice();
   private config?: FullConfig;
+  private suite?: Suite;
+  private result?: FullResult;
+  /** The QA Report's folder, once its index is written. */
+  private written?: string;
 
   constructor(
     options: QaInstructionsReporterOptions = {},
@@ -104,10 +125,16 @@ export default class QaInstructionsReporter implements Reporter {
     ),
     private readonly log = new ReporterLog(),
     private readonly coverage = new PlaywrightRunCoverage(),
+    openerFor: (open: QaReportOpen) => QaReportOpener = (open) =>
+      new QaReportOpener(
+        new QaReportOpenRule(open),
+        new QaReportViewer(openInBrowser),
+      ),
   ) {
     this.folder = new PlaywrightOutputFolder(options.outputFolder);
     this.selection = this.selectionOf(options.select);
     this.formats = this.formatsOf(options.formats);
+    this.opener = openerFor(this.openOf(options.open));
   }
 
   printsToStdio(): boolean {
@@ -118,9 +145,10 @@ export default class QaInstructionsReporter implements Reporter {
    * Learns the project's Playwright version, for version-specific advice, and
    * the run's configuration, to tell whether it covers the whole suite.
    */
-  onBegin(config: FullConfig): void {
+  onBegin(config: FullConfig, suite?: Suite): void {
     try {
       this.config = config;
+      this.suite = suite;
       this.advice = new TraceAdvice(config?.version);
     } catch (error) {
       this.log.error('this run', error);
@@ -151,6 +179,7 @@ export default class QaInstructionsReporter implements Reporter {
     let results: QaInstructionsResult[] = [];
     let report: QaReport;
     try {
+      this.result = result;
       results = this.run.results();
       report = new QaReport(this.folder.resolve(this.config?.configFile), {
         formats: this.formats,
@@ -177,9 +206,32 @@ export default class QaInstructionsReporter implements Reporter {
     }
     try {
       await report.writeIndex();
+      this.written = report.folder;
     } catch (error) {
       this.log.error('the QA Report index', error);
     }
+  }
+
+  /**
+   * Once every reporter has finished, as Playwright's HTML reporter does:
+   * prints where the QA Report is and how to open it, and opens it when the
+   * `open` option says so.
+   */
+  async onExit(): Promise<void> {
+    if (!this.written) return;
+    try {
+      await this.opener.afterRun(this.written, this.passed());
+    } catch (error) {
+      this.log.once('open', `could not open the QA Report: ${String(error)}`);
+    }
+  }
+
+  /** Playwright's HTML reporter opens `on-failure` when any test failed or was flaky. */
+  private passed(): boolean {
+    if (!this.suite) return this.result?.status === 'passed';
+    return this.suite
+      .allTests()
+      .every((test) => !['unexpected', 'flaky'].includes(test.outcome()));
   }
 
   private async write(
@@ -219,6 +271,18 @@ export default class QaInstructionsReporter implements Reporter {
       );
       return new TestSelection();
     }
+  }
+
+  /** An unknown `open` value is ignored, with a warning, in favor of the default. */
+  private openOf(open: string | undefined): QaReportOpen {
+    if (open === undefined || isQaReportOpen(open)) {
+      return open ?? QaReportOpenRule.DEFAULT;
+    }
+    this.log.once(
+      'open option',
+      `ignoring the unknown "open" option (${String(open)}); the QA Report opens ${QaReportOpenRule.DEFAULT}.`,
+    );
+    return QaReportOpenRule.DEFAULT;
   }
 
   /** Unknown formats are dropped, with one warning, rather than stopping the run. Duplicates of the always-written formats are harmless. */

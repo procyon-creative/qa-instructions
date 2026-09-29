@@ -11,6 +11,11 @@ import {
   RENDER_FORMATS,
 } from '../../src/core/index.js';
 import { PlaywrightOutputFolder } from '../../src/playwright/output-folder.js';
+import {
+  QA_REPORT_OPEN_MODES,
+  QaReportHint,
+  QaReportOpenRule,
+} from '../../src/playwright/report-opening.js';
 
 // Tests run from dist-test/test/package/, three levels below the package root.
 const packageRoot = path.resolve(
@@ -106,6 +111,24 @@ test('README states the QA Report output folder default', async () => {
       `\\| \`outputFolder\` +\\| \`string\` +\\| \`'${PlaywrightOutputFolder.DEFAULT}'\``,
     ),
   );
+});
+
+test('README states the open option values and default', async () => {
+  const section = await readmeSection('Reporter options');
+  const values = QA_REPORT_OPEN_MODES.map((mode) => `'${mode}'`).join(
+    ' \\\\\\| ',
+  );
+  assert.match(
+    section,
+    new RegExp(
+      `\\| \`open\` +\\| \`${values}\` +\\| \`'${QaReportOpenRule.DEFAULT}'\``,
+    ),
+  );
+});
+
+test('README documents the show-report command', async () => {
+  const section = await readmeSection('Show report');
+  assert.ok(section.includes(`npx ${QaReportHint.COMMAND} [folder]`));
 });
 
 test('README states the peer dependency Playwright range', async () => {
