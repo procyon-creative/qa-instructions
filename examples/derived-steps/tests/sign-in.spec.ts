@@ -31,6 +31,4 @@ test('Sign in with bad credentials', async ({ page }) => {
   await expect(
     page.getByRole('heading', { name: 'Login failed' }),
   ).not.toBeHidden();
-
-  await page.keyboard.press('Tab');
 });

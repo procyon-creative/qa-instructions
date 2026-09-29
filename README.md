@@ -201,7 +201,6 @@ A check against a regular expression needs the trace, which records the pattern.
 2. Click the **Sign in** link — The page title is **Sign in**; **Username** is empty
 3. Type **demo-user** into **Username**
 4. Click the **Submit bad credentials** button — The page address contains **login-error**; **Invalid credentials** is visible; the **Login failed** heading is visible
-5. Press **Tab**
 ```
 
 Elements are named the way the test found them when that is something a tester sees: a role and name, a label, a text. A test id or CSS selector is never shown. Instead the element is named from the page as the trace's DOM snapshots recorded it: its label, its accessible name, or the text it shows, plus what kind of element it is. Without DOM snapshots the step says only what kind of element it is (or uses the check's message, if it has one).

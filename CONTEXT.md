@@ -34,6 +34,13 @@ A named group of QA Steps, taken from a test's own grouping of its actions.
 **Step Screenshot**:
 The picture of the page at the moment of a QA Step's Action, with a Highlight on the element acted on.
 
+**QA Report**:
+What a test run produces with no extra steps: a browsable page listing every test's QA Instructions with their screenshots, plus each test's QA Instructions as Jira-ready text.
+_Avoid_: bundle (the saved data the QA Report is made from)
+
+**Result Screenshot**:
+A second screenshot of a QA Step, taken after the Action, showing what its Expected Result describes. By default only the last QA Step has one, because the next step's Step Screenshot already shows the result of every other step. Which steps get one is a rule that can be changed, and overridden for a single step.
+
 **Highlight**:
 The mark drawn on a Step Screenshot to show which element the Action touched and, for clicks, where. Its style is configurable. An Approximate Action's outline is dashed.
 _Avoid_: annotation (overloaded with Playwright test annotations)

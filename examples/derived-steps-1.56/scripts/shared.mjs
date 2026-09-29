@@ -20,6 +20,7 @@ export const SPECS = [
   'cart.spec.ts',
   'long-page.spec.ts',
   'certificates.spec.ts',
+  'keyboard.spec.ts',
 ];
 
 /** Each test's bundle and the derived-steps (Playwright 1.63) golden it must match. */
@@ -35,6 +36,7 @@ export const GOLDENS = [
   'long-page--order-boots-from-the-bottom-of-the-page',
   'long-page--order-gift-cards-on-a-smoothly-scrolling-page',
   'certificates--add-three-recs-to-the-cart',
+  'keyboard--move-from-username-to-password-with-tab',
 ];
 
 /**
