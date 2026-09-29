@@ -762,10 +762,16 @@ test('with the trace setting on, each QA Step gets a Step Screenshot from the tr
       },
     ],
   );
+  // By default the last QA Step also has a Result Screenshot.
+  assert.deepEqual(
+    bundle.steps.map((step) => step.resultAssetId),
+    [undefined, undefined, undefined, 'step-04-result'],
+  );
   assert.deepEqual(assetFiles, [
     'step-01.png',
     'step-02.png',
     'step-03.png',
+    'step-04-result.png',
     'step-04.png',
   ]);
   assert.deepEqual(bundle.steps[2].elementBox, {
@@ -918,7 +924,62 @@ test('reporter passes the highlight style option to the core', async () => {
     undefined,
     undefined,
   ]);
+  assert.equal(none.assetFiles.length, 5);
+});
+
+test('reporter passes the resultScreenshots option to the core', async () => {
+  const run = (
+    resultScreenshots: QaInstructionsReporterOptions['resultScreenshots'],
+  ) =>
+    runAttempts([{ steps: sampleSteps, attachments: sampleTrace }], {
+      resultScreenshots,
+    });
+  const results = (bundle: QaRunBundle) =>
+    bundle.steps.map((step) => step.resultAssetId);
+
+  const none = await run('none');
+  assert.deepEqual(results(none.bundle), [
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+  ]);
   assert.equal(none.assetFiles.length, 4);
+
+  // The click's own screenshot from once it was done: the page turned red.
+  const paint = await run({
+    steps: 'none',
+    overrides: [{ match: /Click the Paint button/, screenshots: 'both' }],
+  });
+  assert.deepEqual(results(paint.bundle), [
+    undefined,
+    undefined,
+    'step-03-result',
+    undefined,
+  ]);
+  const page = paint.rendered.get('qa-steps.html') ?? '';
+  assert.match(
+    page,
+    /alt="Step 3: Click the Paint button"><\/figure>\n<figure><figcaption>Result<\/figcaption><img src="data:image\/png;base64,[^"]+" alt="Step 3 result: Click the Paint button">/,
+  );
+});
+
+test('an unusable resultScreenshots option is ignored, with one warning, for the default rule', async () => {
+  const warnings: string[] = [];
+  const warn = console.warn;
+  console.warn = (message: unknown) => warnings.push(String(message));
+  try {
+    const { bundle } = await runAttempts(
+      [{ steps: sampleSteps, attachments: sampleTrace }],
+      {
+        resultScreenshots: 'first',
+      } as unknown as QaInstructionsReporterOptions,
+    );
+    assert.equal(bundle.steps[3].resultAssetId, 'step-04-result');
+  } finally {
+    console.warn = warn;
+  }
+  assert.equal(warnings.filter((w) => /resultScreenshots/.test(w)).length, 1);
 });
 
 test('Step Screenshots come from the trace of the attempt that is kept', async () => {
@@ -926,7 +987,7 @@ test('Step Screenshots come from the trace of the attempt that is kept', async (
     { status: 'failed', retry: 0, steps: sampleSteps },
     { retry: 1, steps: sampleSteps, attachments: sampleTrace },
   ]);
-  assert.equal(lastHasTrace.assetFiles.length, 4);
+  assert.equal(lastHasTrace.assetFiles.length, 5);
 
   const onlyFirstHasTrace = await runAttempts([
     {
@@ -1165,7 +1226,8 @@ test('an unknown trace format yields text-only QA Instructions and one warning',
 test('with a supported trace there is nothing to warn about', async () => {
   const { warnings, assetFiles } = await warningsOfRun('1.63.0', sampleTrace);
   assert.deepEqual(warnings, []);
-  assert.equal(assetFiles.length, 4);
+  // Four Step Screenshots and the last step's Result Screenshot.
+  assert.equal(assetFiles.length, 5);
 });
 
 test('an error in any reporter hook never reaches the test run and is logged once', async () => {

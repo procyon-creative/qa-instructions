@@ -2,6 +2,7 @@ import type {
   CheckCapture,
   ExpectedPattern,
   RecordedElement,
+  Screenshot,
 } from '../core/index.js';
 
 import { CheckRef } from './action-ref.js';
@@ -16,6 +17,8 @@ export type BrowserCheck = {
   selector?: string;
   expectedText?: unknown;
   element?: RecordedElement;
+  /** The page just after the check, when pictured. */
+  result?: Screenshot;
 };
 
 /**
@@ -41,16 +44,27 @@ export class TraceChecks {
     private readonly selectors = new SelectorParser(),
   ) {
     TraceChecks.checkSteps(testEvents).forEach((event, i) => {
-      const stepId = (event.stepId ?? event.callId) as string;
-      const capture = this.capture(event, browserCheck(stepId));
+      const capture = this.capture(
+        event,
+        browserCheck(TraceChecks.stepId(event)),
+      );
       if (capture) {
         this.captures.set(CheckRef.of(i + 1, event.title as string), capture);
       }
     });
   }
 
+  /** The test runner's step id of each `expect` step reporters see, in order. */
+  static stepIds(testEvents: TraceEvent[]): string[] {
+    return TraceChecks.checkSteps(testEvents).map(TraceChecks.stepId);
+  }
+
   check(ref: string): CheckCapture | undefined {
     return this.captures.get(ref);
+  }
+
+  private static stepId(event: TraceEvent): string {
+    return (event.stepId ?? event.callId) as string;
   }
 
   private capture(
@@ -64,6 +78,7 @@ export class TraceChecks {
       ...(target ? { target } : {}),
       ...expected,
       ...(browser?.element ? { element: browser.element } : {}),
+      ...(browser?.result ? { result: browser.result } : {}),
     };
     return Object.keys(capture).length > 0 ? capture : undefined;
   }

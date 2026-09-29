@@ -10,7 +10,15 @@ import type {
   UserActionKind,
 } from '../events.js';
 import type { QaAssetInput, QaRunBundle, QaStepInput } from '../model.js';
-import { StepScreenshotPicker } from '../screenshots/picker.js';
+import { InlineMarkup } from '../render/inline-markup.js';
+import {
+  ResultScreenshotPicker,
+  StepScreenshotPicker,
+} from '../screenshots/picker.js';
+import {
+  ResultScreenshotRule,
+  type StepScreenshots,
+} from '../screenshots/result-rule.js';
 import {
   NoScreenshots,
   type ActionCapture,
@@ -54,6 +62,9 @@ export type QaInstructionsRecorderOptions = {
   /** Default `sections`. */
   sections?: SectionPresentation;
   picker?: StepScreenshotPicker;
+  /** Which QA Steps show a Result Screenshot. Default: the last one. */
+  resultScreenshots?: ResultScreenshotRule;
+  resultPicker?: ResultScreenshotPicker;
   /**
    * Masks configured secrets. Values typed into password fields are always
    * masked as well. Default: password fields only.
@@ -104,6 +115,11 @@ type PendingStep = {
   /** The Action's ref, for its Step Screenshot. */
   ref?: string;
   /**
+   * The ref of the step's last Action (a collapsed group's step has
+   * several), for the page after it.
+   */
+  lastRef?: string;
+  /**
    * For a collapsed group's step started after a warning step: the group's
    * earlier step, which it continues if the warning steps between them go.
    */
@@ -125,7 +141,10 @@ type PendingStep = {
  * step is flagged and the QA Steps go on, as the test did.
  *
  * Given a screenshot source, each QA Step also gets the Step Screenshot of
- * its Action, and the element box and click point where known.
+ * its Action, and the element box and click point where known. The steps
+ * the Result Screenshot rule picks (by default the last) also get a Result
+ * Screenshot of what their Expected Result describes (see
+ * ResultScreenshotPicker).
  *
  * Secrets never reach the bundle: text typed into a field the screenshot
  * source saw was a password field is masked everywhere it appears (the step
@@ -137,6 +156,8 @@ export class QaInstructionsRecorder implements TestEventSink {
   private readonly phraser: StepPhraser;
   private readonly scriptChanges: ScriptChangeRule;
   private readonly picker: StepScreenshotPicker;
+  private readonly resultRule: ResultScreenshotRule;
+  private readonly resultPicker: ResultScreenshotPicker;
   private readonly presentation: SectionPresentation;
   private readonly masker: SecretMasker;
   /** Text the test typed into fields, by the ref of the Action that typed it. */
@@ -156,6 +177,8 @@ export class QaInstructionsRecorder implements TestEventSink {
     this.scriptChanges = options.scriptChanges ?? new ScriptChangeRule();
     this.presentation = options.sections ?? 'sections';
     this.picker = options.picker ?? new StepScreenshotPicker();
+    this.resultRule = options.resultScreenshots ?? new ResultScreenshotRule();
+    this.resultPicker = options.resultPicker ?? new ResultScreenshotPicker();
     this.masker = options.masker ?? new SecretMasker();
   }
 
@@ -226,13 +249,29 @@ export class QaInstructionsRecorder implements TestEventSink {
       !this.end || this.end.status === 'passed' ? 'complete' : 'incomplete',
     );
 
-    this.resolvedSteps(screenshots).forEach(({ step, capture }, i) => {
-      const screenshot = this.picker.pick(capture?.screenshots ?? []);
-      const asset = screenshot && this.screenshotAsset(i + 1, screenshot);
+    const masker = this.masker.withValues(this.passwords(screenshots));
+    const steps = this.resolvedSteps(screenshots);
+    steps.forEach(({ step, capture }, i) => {
+      const action = this.phrase(step, capture);
+      const shown = this.resultRule.screenshots({
+        action: masker.mask(InlineMarkup.toPlain(action)),
+        last: i === steps.length - 1,
+      });
+      const { screenshot, result } = this.images(
+        step,
+        capture,
+        screenshots,
+        shown,
+      );
+      const id = `step-${String(i + 1).padStart(2, '0')}`;
+      const asset = screenshot && this.screenshotAsset(id, screenshot);
+      const resultAsset =
+        result && this.screenshotAsset(`${id}-result`, result);
       if (asset) builder.addAsset(asset);
+      if (resultAsset) builder.addAsset(resultAsset);
       const checks = this.seenChecks(step.checks, screenshots);
       builder.addStep({
-        action: this.phrase(step, capture),
+        action,
         url: step.url,
         expected: this.expectedResult(checks.map(({ phrase }) => phrase)),
         section: step.section,
@@ -242,9 +281,9 @@ export class QaInstructionsRecorder implements TestEventSink {
         warning: step.warning,
         approximate: step.approximate,
         ...this.captureFields(capture, screenshot, asset),
+        resultAssetId: resultAsset?.id,
       });
     });
-    const masker = this.masker.withValues(this.passwords(screenshots));
     return {
       bundle: masker.maskBundle(builder.toBundle()),
       assets: builder.pendingAssets(),
@@ -283,6 +322,7 @@ export class QaInstructionsRecorder implements TestEventSink {
         previous === copies.get(pending.resumes)
       ) {
         previous.url ??= pending.url;
+        previous.lastRef = pending.lastRef ?? previous.lastRef;
         if (pending.failed) previous.failed = true;
         previous.checks.push(...pending.checks);
         continue;
@@ -295,6 +335,37 @@ export class QaInstructionsRecorder implements TestEventSink {
       kept.push({ step, capture });
     }
     return kept;
+  }
+
+  /**
+   * The step's Step Screenshot and Result Screenshot, as `shown` asks. A
+   * step asked for its Result Screenshot alone keeps its Step Screenshot
+   * when there is no result to show, and a result no different from the
+   * Step Screenshot is not shown twice.
+   */
+  private images(
+    step: PendingStep,
+    capture: ActionCapture | undefined,
+    screenshots: ScreenshotSource,
+    shown: StepScreenshots,
+  ): { screenshot?: Screenshot; result?: Screenshot } {
+    const screenshot = this.picker.pick(capture?.screenshots ?? []);
+    if (shown === 'action') return { screenshot };
+    const last =
+      step.lastRef === undefined || step.lastRef === step.ref
+        ? capture
+        : screenshots.capture(step.lastRef);
+    const result = this.resultPicker.pick(
+      last,
+      step.checks.map((check) =>
+        check.ref === undefined ? undefined : screenshots.check?.(check.ref),
+      ),
+    );
+    if (!result) return { screenshot };
+    if (shown === 'result') return { result };
+    return screenshot?.data.equals(result.data)
+      ? { screenshot }
+      : { screenshot, result };
   }
 
   /** What the test typed into fields the screenshot source saw were password fields. */
@@ -354,6 +425,7 @@ export class QaInstructionsRecorder implements TestEventSink {
       failed: event.failed,
       approximate: event.forced === true,
       ref: event.ref,
+      lastRef: event.ref,
     });
   }
 
@@ -372,6 +444,7 @@ export class QaInstructionsRecorder implements TestEventSink {
       checks: [],
       warning: true,
       ref: event.ref,
+      lastRef: event.ref,
     });
   }
 
@@ -395,6 +468,7 @@ export class QaInstructionsRecorder implements TestEventSink {
     }
     this.collapsedStep.url ??= url;
     this.collapsedStep.ref ??= event.ref;
+    this.collapsedStep.lastRef = event.ref ?? this.collapsedStep.lastRef;
     if (event.failed) this.collapsedStep.failed = true;
   }
 
@@ -467,11 +541,7 @@ export class QaInstructionsRecorder implements TestEventSink {
     }
   }
 
-  private screenshotAsset(
-    stepIndex: number,
-    screenshot: Screenshot,
-  ): QaAssetInput {
-    const id = `step-${String(stepIndex).padStart(2, '0')}`;
+  private screenshotAsset(id: string, screenshot: Screenshot): QaAssetInput {
     const extension = FILE_EXTENSIONS[screenshot.contentType] ?? 'bin';
     return {
       id,

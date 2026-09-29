@@ -21,3 +21,5 @@
    **Expected:** The page address contains **login-error**; **Invalid credentials** is visible; the **Login failed** heading is visible
 
    ![Step 4: Click the Submit bad credentials button](assets/step-04.png)
+
+   ![Step 4 result: The page address contains login-error; Invalid credentials is visible; the Login failed heading is visible](assets/step-04-result.png)

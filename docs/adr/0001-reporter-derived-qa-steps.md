@@ -62,6 +62,14 @@ The core decides what a Highlight marks and where (`HighlightPlanner`); a screen
 - **Only on screenshots that match the box.** The box is read at the moment of the Action. Action-moment and before-moment screenshots are highlighted; after-moment ones are not, since the page may have navigated or closed a menu.
 - **Warning steps get none; approximate steps get a dashed outline.** A forced Action's element may have moved while it was clicked, so the outline is drawn where the element was, dashed to say so, and the step's text says the highlight may not line up.
 
+## Result Screenshots
+
+Which QA Steps get a Result Screenshot is the core's `ResultScreenshotRule` (last step by default, every, or none, with per-step overrides matched against the step's masked, plain text). The picture is chosen in the core too (`ResultScreenshotPicker`), from neutral facts the screenshot source reports: a `result` on each `CheckCapture` and `ActionCapture`, the page once that call was done. The picker takes the step's last check that has one, else its last Action's.
+
+On 1.63+ a call's `result` is its own `after` screenshot (`screenshots/<callId>-after.png`), and `Frame.expect` calls get before and after screenshots like Actions do. A check's `after` screenshot is the trustworthy one: Playwright takes it once the check has passed, so it shows the page as the Expected Result was confirmed. An Action's own `after` screenshot is taken within tens of milliseconds of the call returning, before a click's navigation or a smooth scroll may have finished, so it is only the fallback for a step with no check the browser ran. Checks on values the test read (`expect(text).toBe(…)`) make no browser call and have none.
+
+Before 1.63 there are no per-action screenshots, and no screen recording frame is yet known to show a result reliably (see "What the recording shows" above), so `result` is left undefined there: `TraceScreenshotSource.resultImage` is where a trustworthy frame of the recording can be supplied later. The recorder never falls back to a Step Screenshot as a result, never shows a result byte-identical to the Step Screenshot, and never highlights a result (the Highlighter reads only `assetIds[0]`; a result is `resultAssetId`).
+
 ## Older Playwright step data
 
 Before 1.63, reporter steps have no `subtitle` or `params`. The title carries them instead (`Fill "demo-user" getByLabel('Username')`, `Navigate to "/"`), so a step without `params` is read from its title. A check's title names only the matcher (1.57–1.62 add its locator), so its subject and expected value are read from the test's source at the check, like the script and force facts above: `expect(<subject>)[.not].<matcher>(<literal>)`. An expected value written as a literal, or as a constant declared once in the file with a literal, is read; other expressions, and checks whose subject is a variable, are not resolved.

@@ -15,7 +15,7 @@ const MAX_LEVEL = 6;
 
 /**
  * PR-ready Markdown: nested Sections as headings, and each step's Step
- * Screenshot inline under it.
+ * Screenshot, then its Result Screenshot, inline under it.
  */
 export class MarkdownRenderer {
   constructor(private readonly images?: StepImages) {}
@@ -72,9 +72,11 @@ export class MarkdownRenderer {
       paragraphs[paragraphs.length - 1] += ` (**${step.failure}**)`;
     }
 
-    const src = step.screenshot && this.images?.src(step.screenshot.asset);
-    if (step.screenshot && src) {
-      paragraphs.push(`![${this.altText(step.screenshot.alt)}](${src})`);
+    for (const screenshot of [step.screenshot, step.resultScreenshot]) {
+      const src = screenshot && this.images?.src(screenshot.asset);
+      if (screenshot && src) {
+        paragraphs.push(`![${this.altText(screenshot.alt)}](${src})`);
+      }
     }
 
     // Continuation paragraphs align with the item's text to stay in the item.

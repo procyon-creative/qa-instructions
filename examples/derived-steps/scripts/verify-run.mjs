@@ -167,35 +167,87 @@ async function verifyBundleScreenshots(golden, bundleDirName) {
       fail(`${label}: missing screenshot ${asset?.filename}: ${error.message}`);
       continue;
     }
-    if (data.length < golden.minBytes) {
-      fail(`${label}: screenshot is only ${data.length} bytes`);
-    }
+    probeImage(label, golden, step, data, expected.probes);
 
-    // A high-DPI screenshot may be a whole multiple of the viewport.
-    const png = PNG.sync.read(data);
-    const scale = png.width / golden.viewport.width;
-    if (
-      !Number.isInteger(scale) ||
-      png.height !== golden.viewport.height * scale
-    ) {
-      fail(`${label}: screenshot is ${png.width}x${png.height}`);
+    if (golden.resultsListed) {
+      await verifyResultScreenshot(
+        label,
+        golden,
+        bundle,
+        bundleDir,
+        step,
+        expected,
+      );
     }
+  }
+}
 
-    for (const probe of expected.probes) {
-      const point = probePoint(probe, step, scale);
-      if (!point) {
-        fail(
-          `${label}: no element box or click point for probe "${probe.name}"`,
-        );
-        continue;
-      }
-      const idx = (png.width * point.y + point.x) * 4;
-      const actual = [png.data[idx], png.data[idx + 1], png.data[idx + 2]];
-      if (actual.some((c, k) => Math.abs(c - probe.rgb[k]) > TOLERANCE)) {
-        fail(
-          `${label}: probe "${probe.name}" at (${point.x},${point.y}) expected rgb(${probe.rgb}) got rgb(${actual})`,
-        );
-      }
+/**
+ * A step's Result Screenshot, where the golden lists results: present, with
+ * no Highlight and its probes matching, only on the steps given a `result`.
+ */
+async function verifyResultScreenshot(
+  label,
+  golden,
+  bundle,
+  bundleDir,
+  step,
+  expected,
+) {
+  if (!expected.result) {
+    if (step.resultAssetId) {
+      fail(`${label}: has a Result Screenshot, expected none`);
+    }
+    return;
+  }
+  const asset = bundle.assets[step.resultAssetId];
+  if (!asset) {
+    fail(`${label}: no Result Screenshot`);
+    return;
+  }
+  if (asset.highlight) {
+    fail(`${label}: Result Screenshot is highlighted (${asset.highlight})`);
+  }
+  let data;
+  try {
+    data = await readFile(path.join(bundleDir, 'assets', asset.filename));
+  } catch (error) {
+    fail(
+      `${label}: missing Result Screenshot ${asset.filename}: ${error.message}`,
+    );
+    return;
+  }
+  probeImage(`${label} result`, golden, step, data, expected.result.probes);
+}
+
+/** Checks a screenshot's size and samples its probes. */
+function probeImage(label, golden, step, data, probes) {
+  if (data.length < golden.minBytes) {
+    fail(`${label}: screenshot is only ${data.length} bytes`);
+  }
+
+  // A high-DPI screenshot may be a whole multiple of the viewport.
+  const png = PNG.sync.read(data);
+  const scale = png.width / golden.viewport.width;
+  if (
+    !Number.isInteger(scale) ||
+    png.height !== golden.viewport.height * scale
+  ) {
+    fail(`${label}: screenshot is ${png.width}x${png.height}`);
+  }
+
+  for (const probe of probes) {
+    const point = probePoint(probe, step, scale);
+    if (!point) {
+      fail(`${label}: no element box or click point for probe "${probe.name}"`);
+      continue;
+    }
+    const idx = (png.width * point.y + point.x) * 4;
+    const actual = [png.data[idx], png.data[idx + 1], png.data[idx + 2]];
+    if (actual.some((c, k) => Math.abs(c - probe.rgb[k]) > TOLERANCE)) {
+      fail(
+        `${label}: probe "${probe.name}" at (${point.x},${point.y}) expected rgb(${probe.rgb}) got rgb(${actual})`,
+      );
     }
   }
 }
@@ -215,7 +267,10 @@ async function renderedImages(rendered, content) {
   );
 }
 
-/** Each rendered image must be the Step Screenshot of its step, in order. */
+/**
+ * Each rendered image must be the Step Screenshot of its step, then its
+ * Result Screenshot if any, in step order.
+ */
 async function verifyImages(rendered, bundleDir, content) {
   const dir = path.join(root, bundleDir);
   const bundle = JSON.parse(
@@ -223,11 +278,10 @@ async function verifyImages(rendered, bundleDir, content) {
   );
   const expected = await Promise.all(
     bundle.steps
-      .filter((step) => step.assetIds?.length)
-      .map((step) =>
-        readFile(
-          path.join(dir, 'assets', bundle.assets[step.assetIds[0]].filename),
-        ),
+      .flatMap((step) => [step.assetIds?.[0], step.resultAssetId])
+      .filter((id) => id !== undefined)
+      .map((id) =>
+        readFile(path.join(dir, 'assets', bundle.assets[id].filename)),
       ),
   );
   const actual = await renderedImages(rendered, content);
@@ -239,7 +293,7 @@ async function verifyImages(rendered, bundleDir, content) {
   }
   actual.forEach((image, i) => {
     if (!image.equals(expected[i])) {
-      fail(`${rendered}: image ${i + 1} is not its step's Step Screenshot`);
+      fail(`${rendered}: image ${i + 1} is not its step's screenshot`);
     }
   });
 }

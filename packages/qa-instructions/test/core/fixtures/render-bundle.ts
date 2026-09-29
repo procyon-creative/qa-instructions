@@ -5,7 +5,7 @@ import type { QaRunBundle } from '../../../src/core/model.js';
  * incomplete status, nested Sections (including a return to the outer one and
  * a step outside any Section), Expected Results, a warning step, an
  * approximate step, the failed step, steps with and without a Step
- * Screenshot, and characters that must be escaped in Markdown and HTML.
+ * Screenshot, a Result Screenshot, and characters that must be escaped in Markdown and HTML.
  */
 export const RENDER_BUNDLE: QaRunBundle = {
   version: '1',
@@ -52,6 +52,7 @@ export const RENDER_BUNDLE: QaRunBundle = {
       action: 'Click `Submit` <b>now</b>',
       expected: '**Welcome** is visible',
       assetIds: ['step-05'],
+      resultAssetId: 'step-05-result',
       failed: true,
       screenshotMoment: 'action',
     },
@@ -77,6 +78,11 @@ export const RENDER_BUNDLE: QaRunBundle = {
       contentType: 'image/png',
       filename: 'step-05.png',
     },
+    'step-05-result': {
+      id: 'step-05-result',
+      contentType: 'image/png',
+      filename: 'step-05-result.png',
+    },
   },
 };
 
@@ -86,4 +92,5 @@ export const RENDER_BUNDLE_IMAGES: ReadonlyMap<string, Uint8Array> = new Map([
   ['step-02', Buffer.from('two')],
   ['step-03', Buffer.from('three')],
   ['step-05', Buffer.from('five')],
+  ['step-05-result', Buffer.from('five-result')],
 ]);

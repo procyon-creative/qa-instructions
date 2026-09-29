@@ -9,3 +9,5 @@
    **Expected:** **Thanks for subscribing** is visible
 
    ![Step 2: Click the Subscribe button](assets/step-02.png)
+
+   ![Step 2 result: Thanks for subscribing is visible](assets/step-02-result.png)

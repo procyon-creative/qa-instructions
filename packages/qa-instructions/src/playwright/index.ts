@@ -14,6 +14,7 @@ import {
   QaReport,
   QaReportOpener,
   QaReportViewer,
+  ResultScreenshotRule,
   SecretMasker,
   StaleBundlePolicy,
   StepScreenshotHighlighter,
@@ -21,6 +22,7 @@ import {
   type HighlightStyle,
   type MaskPattern,
   type RenderFormat,
+  type ResultScreenshotOptions,
   type TestSelectionOptions,
   type QaInstructionsResult,
   type SectionPresentation,
@@ -71,6 +73,15 @@ export type QaInstructionsReporterOptions = {
    */
   highlight?: HighlightStyle;
   /**
+   * Which QA Steps also show a Result Screenshot of what their Expected
+   * Result describes, after their Step Screenshot: `last` (default),
+   * `every`, or `none`; or `{ steps, overrides }`, where each override
+   * `{ match, screenshots }` chooses `action`, `result`, or `both` for the
+   * steps whose text contains `match` (a string) or matches it (a RegExp).
+   * Playwright 1.63+ only for now.
+   */
+  resultScreenshots?: ResultScreenshotOptions;
+  /**
    * More formats written into each test's directory of the QA Report, which
    * always holds its page (`qa-steps.html`) and Jira-ready text
    * (`qa-steps.txt`): `markdown` (`qa-steps.md`, linking the test's
@@ -100,6 +111,7 @@ export default class QaInstructionsReporter implements Reporter {
   private readonly folder: PlaywrightOutputFolder;
   private readonly selection: TestSelection;
   private readonly formats: RenderFormat[];
+  private readonly resultScreenshots: ResultScreenshotRule;
   private readonly opener: QaReportOpener;
   private advice = new TraceAdvice();
   private config?: FullConfig;
@@ -113,7 +125,12 @@ export default class QaInstructionsReporter implements Reporter {
     private readonly translator = new PlaywrightStepTranslator(),
     masker = new SecretMasker(options.mask),
     private readonly run = new QaInstructionsRun(
-      () => new QaInstructionsRecorder({ sections: options.testSteps, masker }),
+      () =>
+        new QaInstructionsRecorder({
+          sections: options.testSteps,
+          masker,
+          resultScreenshots: this.resultScreenshots,
+        }),
       undefined,
       masker,
     ),
@@ -134,6 +151,9 @@ export default class QaInstructionsReporter implements Reporter {
     this.folder = new PlaywrightOutputFolder(options.outputFolder);
     this.selection = this.selectionOf(options.select);
     this.formats = this.formatsOf(options.formats);
+    this.resultScreenshots = this.resultScreenshotsOf(
+      options.resultScreenshots,
+    );
     this.opener = openerFor(this.openOf(options.open));
   }
 
@@ -270,6 +290,21 @@ export default class QaInstructionsReporter implements Reporter {
         `ignoring the "select" option (${String(error)}); every test produces QA Instructions.`,
       );
       return new TestSelection();
+    }
+  }
+
+  /** An unusable `resultScreenshots` option is ignored, with a warning, in favor of the default rule. */
+  private resultScreenshotsOf(
+    options: ResultScreenshotOptions | undefined,
+  ): ResultScreenshotRule {
+    try {
+      return new ResultScreenshotRule(options);
+    } catch (error) {
+      this.log.once(
+        'resultScreenshots',
+        `ignoring the "resultScreenshots" option (${String(error)}); only the last QA Step gets a Result Screenshot.`,
+      );
+      return new ResultScreenshotRule();
     }
   }
 
