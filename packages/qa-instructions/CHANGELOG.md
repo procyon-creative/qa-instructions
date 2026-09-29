@@ -1,5 +1,7 @@
 # Changelog
 
+Release notes for versions after 3.0.0 are on [GitHub Releases](https://github.com/procyon-creative/qa-instructions/releases).
+
 ## [3.0.0](https://github.com/procyon-creative/qa-instructions/compare/v2.0.0...v3.0.0) (2026-09-28)
 
 

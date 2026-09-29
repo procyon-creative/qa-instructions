@@ -1,51 +1,95 @@
+# Keep this filename: npm trusted publishing is bound to it
+# (`npm trust github ... --file release-please.yml`, see docs/ci.md).
+# Renaming it breaks npm publishing until a maintainer re-runs `npm trust`.
 name: Release
 
 on:
   push:
     branches: [main]
-    paths-ignore: ['**/*.md', 'docs/**']
+    paths: ['packages/qa-instructions/package.json']
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: write # tag + GitHub release
   id-token: write # npm trusted publishing (OIDC)
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  PACKAGE_DIR: packages/qa-instructions
+  PACKAGE_NAME: '@procyon-creative/qa-instructions'
+
 jobs:
-  release-please:
+  release:
     if: github.repository_owner == 'procyon-creative'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      # Manifest mode: release-please-config.json and .release-please-manifest.json
-      # version packages/qa-instructions, so its outputs are prefixed with that path.
-      - uses: googleapis/release-please-action@v5
-        id: release
-
-      # Publish to npm via trusted publishing (OIDC) when a release is created.
       - uses: actions/checkout@v7
-        if: ${{ steps.release.outputs['packages/qa-instructions--release_created'] }}
+
+      # Release only when package.json's version has no vX.Y.Z tag yet. Deciding
+      # on the tag, not on "the file changed", makes dependency-only edits and
+      # re-runs of an already released version no-ops.
+      - name: Decide whether to release
+        id: release_check
+        run: |
+          version="$(jq -r .version "$PACKAGE_DIR/package.json")"
+          tag="v$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          # --exit-code: 0 = tag found, 2 = no such tag, anything else = error.
+          status=0
+          git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null || status=$?
+          case "$status" in
+            0) echo "$tag already exists; nothing to release."
+               echo "release=false" >> "$GITHUB_OUTPUT" ;;
+            2) echo "Releasing $tag."
+               echo "release=true" >> "$GITHUB_OUTPUT" ;;
+            *) exit "$status" ;;
+          esac
 
       - uses: pnpm/action-setup@v6
-        if: ${{ steps.release.outputs['packages/qa-instructions--release_created'] }}
+        if: steps.release_check.outputs.release == 'true'
         with:
           version: 9
 
       - uses: actions/setup-node@v7
-        if: ${{ steps.release.outputs['packages/qa-instructions--release_created'] }}
+        if: steps.release_check.outputs.release == 'true'
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
 
       - run: pnpm install --frozen-lockfile
-        if: ${{ steps.release.outputs['packages/qa-instructions--release_created'] }}
+        if: steps.release_check.outputs.release == 'true'
 
-      - run: pnpm --filter @procyon-creative/qa-instructions build
-        if: ${{ steps.release.outputs['packages/qa-instructions--release_created'] }}
+      - run: pnpm --filter "$PACKAGE_NAME" build
+        if: steps.release_check.outputs.release == 'true'
 
-      - run: pnpm --filter @procyon-creative/qa-instructions publish --access public --no-git-checks
-        if: ${{ steps.release.outputs['packages/qa-instructions--release_created'] }}
+      # Publish before tagging so a failed publish leaves no tag and a re-run
+      # retries it. Skip if a previous attempt already published this version.
+      - name: Publish to npm
+        if: steps.release_check.outputs.release == 'true'
+        env:
+          VERSION: ${{ steps.release_check.outputs.version }}
+        run: |
+          status="$(curl -s -o /dev/null -w '%{http_code}' "https://registry.npmjs.org/$PACKAGE_NAME/$VERSION")"
+          case "$status" in
+            200) echo "$PACKAGE_NAME@$VERSION is already on npm." ;;
+            404) pnpm --filter "$PACKAGE_NAME" publish --access public --no-git-checks ;;
+            *) echo "npm registry answered HTTP $status for $PACKAGE_NAME@$VERSION." >&2
+               exit 1 ;;
+          esac
+
+      - name: Tag and create the GitHub release
+        if: steps.release_check.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release_check.outputs.tag }}
+        run: gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --generate-notes
 
       - uses: procyon-creative/jira-action-man@v2
-        if: ${{ steps.release.outputs['packages/qa-instructions--release_created'] }}
+        if: steps.release_check.outputs.release == 'true'
         id: jira
         with:
           projects: 'QI'
