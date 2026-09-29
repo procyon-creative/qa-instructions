@@ -13,8 +13,9 @@ export default defineConfig({
   testDir: './tests',
   reporter: [
     ['list'],
-    // The QA Report in qa-report/, the default folder.
-    ['@procyon-creative/qa-instructions/playwright', { mask }],
+    // The QA Report in qa-report/, the default folder, never opened in a
+    // browser: scripts check it.
+    ['@procyon-creative/qa-instructions/playwright', { mask, open: 'never' }],
   ],
   use: {
     baseURL,

@@ -22,6 +22,7 @@ export default defineConfig({
       '@procyon-creative/qa-instructions/playwright',
       {
         outputFolder: 'qa-report',
+        open: 'on-failure',
         formats: ['markdown'],
         testSteps: 'sections',
         highlight: ['outline', 'clickDot'],
@@ -55,7 +56,15 @@ qa-report/
     bundle.json, assets/          the saved data the report is made from
 ```
 
-Open `qa-report/index.html` to browse every test's QA Instructions; paste a test's `qa-steps.txt` into your ticket's QA Steps. The pages load nothing from the network, so the folder works offline, from disk, or as a CI artifact. To regenerate the report from its saved data without re-running tests, use [`qa-instructions render`](#render).
+At the end of the run the reporter prints how to open it, as Playwright does for its HTML report, and opens it in your browser when a test failed (see [`open`](#open)):
+
+```
+To open last QA Report run:
+
+  npx qa-instructions show-report qa-report
+```
+
+Browse every test's QA Instructions from its `index.html`; paste a test's `qa-steps.txt` into your ticket's QA Steps. The pages load nothing from the network, so the folder works offline, from disk, or as a CI artifact. To regenerate the report from its saved data without re-running tests, use [`qa-instructions render`](#render).
 
 `@playwright/test` is an optional peer dependency used for types only, so the package always runs against your project's own Playwright and never loads a second copy.
 
@@ -72,6 +81,7 @@ The second element of the reporter entry in `playwright.config.ts`.
 | Option         | Type                                                                              | Default                     |
 | -------------- | --------------------------------------------------------------------------------- | --------------------------- |
 | `outputFolder` | `string`                                                                          | `'qa-report'`               |
+| `open`         | `'always' \| 'never' \| 'on-failure'`                                             | `'on-failure'`              |
 | `formats`      | `('qa-steps' \| 'markdown' \| 'html' \| 'json')[]`                                | none beyond the QA Report   |
 | `select`       | `{ tags?: string[]; files?: string[] }`                                           | every test                  |
 | `testSteps`    | `'sections' \| 'collapse' \| 'ignore'`                                            | `'sections'`                |
@@ -96,6 +106,16 @@ An unrecognized command-line argument also counts as a partial run. A bundle who
 ```typescript
 {
   outputFolder: 'artifacts/qa-report';
+}
+```
+
+### `open`
+
+When to open the QA Report in your browser after the run, with the values and default of the `open` option of Playwright's HTML reporter: `'always'`, `'never'`, or `'on-failure'` (when any test failed or was flaky). As with Playwright's report, it never opens when the `CI` environment variable is set, when standard input is not a terminal, or when a coding agent (Claude Code, GitHub Copilot CLI) runs the tests, whatever this option says. Every run, opened or not, ends by printing the [`show-report`](#show-report) command for its folder. An unknown value is ignored, with one warning.
+
+```typescript
+{
+  open: 'never';
 }
 ```
 
@@ -226,6 +246,16 @@ When the test found the element inside another one (`form.locator(…)` on `page
 4. Click the **Add to Cart** button in the **Renewable Energy Certificates (RECs)** form — The page shows **3 × Renewable Energy Certificates (RECs) in your cart**
 ```
 
+## Show report
+
+Opens the last QA Report in your browser, like `npx playwright show-report`:
+
+```bash
+npx qa-instructions show-report [folder]
+```
+
+Without `[folder]` it opens `qa-report/` beside the `package.json` nearest the working directory, where the reporter writes it by default; a `[folder]` is relative to the working directory. The report is static and works offline, so its `index.html` is opened directly from disk rather than served.
+
 ## Render
 
 Every test run writes its QA Report; nothing needs rendering by hand. The `qa-instructions` command, from the same package, regenerates a QA Report from the saved data in it without re-running tests, for example after upgrading this package:
@@ -256,7 +286,7 @@ One published package, `@procyon-creative/qa-instructions` (`packages/qa-instruc
 | ---------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------- |
 | `@procyon-creative/qa-instructions`            | `src/core/`       | Runner-independent core: test event port, QA Steps, bundle model, I/O, renderers, QA Report |
 | `@procyon-creative/qa-instructions/playwright` | `src/playwright/` | Playwright reporter (default export); draws Highlights with sharp                           |
-| `qa-instructions` command                      | `src/cli/`        | `qa-instructions render`                                                                    |
+| `qa-instructions` command                      | `src/cli/`        | `qa-instructions show-report`, `qa-instructions render`                                     |
 
 `src/core/` imports nothing from Playwright, sharp, or the folders beside it; ESLint enforces this.
 

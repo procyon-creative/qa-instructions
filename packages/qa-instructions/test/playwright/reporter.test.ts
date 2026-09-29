@@ -5,8 +5,21 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
-import type { TestCase, TestResult, TestStep } from '@playwright/test/reporter';
-import type { QaRunBundle } from '../../src/core/index.js';
+import type {
+  FullResult,
+  Suite,
+  TestCase,
+  TestResult,
+  TestStep,
+} from '@playwright/test/reporter';
+import {
+  QaReportHint,
+  QaReportOpener,
+  QaReportViewer,
+  RunEnvironment,
+  type QaReportOpenRule,
+  type QaRunBundle,
+} from '../../src/core/index.js';
 
 import QaInstructionsReporter, {
   type QaInstructionsReporterOptions,
@@ -1209,4 +1222,152 @@ test('bad reporter options never stop the test run', async () => {
     await rm(out, { recursive: true, force: true });
   }
   assert.equal(warnings.filter((w) => /select/.test(w)).length, 1);
+});
+
+/** A suite whose tests have the given outcomes, as `onBegin` receives it. */
+function suiteOf(...outcomes: ReturnType<TestCase['outcome']>[]): Suite {
+  return {
+    allTests: () => outcomes.map((outcome) => ({ outcome: () => outcome })),
+  } as unknown as Suite;
+}
+
+type Opening = { opened: string[]; printed: string[] };
+
+/** A report opener recording what it opens and prints into `into`. */
+function recordingOpener(
+  into: Opening,
+  environment = new RunEnvironment({ ci: false, interactive: true }),
+): (rule: QaReportOpenRule) => QaReportOpener {
+  return (rule) =>
+    new QaReportOpener(
+      rule,
+      environment,
+      new QaReportViewer(async (file) => {
+        into.opened.push(file);
+      }),
+      (text) => into.printed.push(text),
+    );
+}
+
+/** The reporter with every collaborator its default but the report opener. */
+function reporterOpening(
+  options: QaInstructionsReporterOptions,
+  opener: (rule: QaReportOpenRule) => QaReportOpener,
+): QaInstructionsReporter {
+  return new QaInstructionsReporter(
+    options,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    opener,
+  );
+}
+
+/**
+ * Runs one passing test through a reporter, in a suite with the given
+ * outcomes, and returns what its report opener opened and printed at exit.
+ */
+async function openingOfRun(
+  suite: Suite,
+  options: QaInstructionsReporterOptions = {},
+  environment?: RunEnvironment,
+): Promise<
+  Opening & { out: string; rule?: QaReportOpenRule; warnings: string[] }
+> {
+  const opening: Opening = { opened: [], printed: [] };
+  const warnings: string[] = [];
+  let rule: QaReportOpenRule | undefined;
+  const warn = console.warn;
+  console.warn = (message: unknown) => warnings.push(String(message));
+  const out = await mkdtemp(path.join(tmpdir(), 'qa-reporter-'));
+  try {
+    const opener = recordingOpener(opening, environment);
+    const reporter = reporterOpening({ ...options, outputFolder: out }, (r) => {
+      rule = r;
+      return opener(r);
+    });
+    reporter.onBegin({ version: '1.63.0' } as never, suite);
+    reporter.onTestEnd(mockTestCase(), {
+      status: 'passed',
+      retry: 0,
+      attachments: [],
+      steps: [step(navigate)],
+    } as unknown as TestResult);
+    await reporter.onEnd({ status: 'passed' } as FullResult);
+    await reporter.onExit();
+    return { ...opening, out, rule, warnings };
+  } finally {
+    console.warn = warn;
+    await rm(out, { recursive: true, force: true });
+  }
+}
+
+test("the open option defaults to Playwright's on-failure", async () => {
+  const { rule } = await openingOfRun(suiteOf('expected'));
+  assert.equal(rule?.open, 'on-failure');
+});
+
+test('an unknown open option is ignored, with one warning', async () => {
+  const { rule, warnings } = await openingOfRun(suiteOf('expected'), {
+    open: 'sometimes',
+  } as unknown as QaInstructionsReporterOptions);
+  assert.equal(rule?.open, 'on-failure');
+  assert.equal(warnings.filter((w) => /"open"/.test(w)).length, 1);
+});
+
+test('after a run with a failed or flaky test, the report opens on failure', async () => {
+  for (const outcome of ['unexpected', 'flaky'] as const) {
+    const { out, opened, printed } = await openingOfRun(
+      suiteOf('expected', outcome),
+    );
+    assert.deepEqual(opened, [path.join(out, 'index.html')], outcome);
+    assert.equal(printed.length, 1);
+  }
+});
+
+test('after a passing run, the report stays closed on failure and the hint is printed', async () => {
+  const { out, opened, printed } = await openingOfRun(
+    suiteOf('expected', 'skipped'),
+  );
+  assert.deepEqual(opened, []);
+  const environment = new RunEnvironment({ ci: false, interactive: true });
+  assert.deepEqual(printed, [new QaReportHint(environment).text(out)]);
+});
+
+test('the open option reaches the rule', async () => {
+  const always = await openingOfRun(suiteOf('expected'), { open: 'always' });
+  assert.equal(always.opened.length, 1);
+  const never = await openingOfRun(suiteOf('unexpected'), { open: 'never' });
+  assert.deepEqual(never.opened, []);
+});
+
+test('in CI nothing opens, whatever the option, and the hint is printed', async () => {
+  const { opened, printed } = await openingOfRun(
+    suiteOf('unexpected'),
+    { open: 'always' },
+    new RunEnvironment({ ci: true, interactive: true }),
+  );
+  assert.deepEqual(opened, []);
+  assert.match(printed.join(''), /qa-instructions show-report/);
+});
+
+test('with no QA Report written, exit prints and opens nothing', async () => {
+  const opening: Opening = { opened: [], printed: [] };
+  const warn = console.warn;
+  console.warn = () => {};
+  try {
+    const reporter = reporterOpening(
+      { outputFolder: '/dev/null/cannot-write-here', open: 'always' },
+      recordingOpener(opening),
+    );
+    await reporter.onEnd();
+    await reporter.onExit();
+  } finally {
+    console.warn = warn;
+  }
+  assert.deepEqual(opening, { opened: [], printed: [] });
 });

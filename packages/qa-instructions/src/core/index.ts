@@ -85,6 +85,18 @@ export {
 } from './report/index-view.js';
 export { QaReportIndexHtml } from './report/index-html.js';
 export {
+  RunEnvironment,
+  type RunEnvironmentFacts,
+} from './report/environment.js';
+export {
+  QA_REPORT_OPEN_MODES,
+  QaReportOpenRule,
+  isQaReportOpen,
+  type QaReportOpen,
+} from './report/open-rule.js';
+export { QaReportViewer, type BrowserOpener } from './report/viewer.js';
+export { QaReportHint, QaReportOpener } from './report/opener.js';
+export {
   render,
   renderQaSteps,
   renderMarkdown,
