@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'">
+<title>QA Report</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #1f2328;
+  --muted: #59636e;
+  --border: #d1d9e0;
+  --code-bg: #eff1f3;
+  --note-bg: #ddf4ff;
+  --note-border: #0969da;
+  --warn-bg: #fff8c5;
+  --warn-border: #9a6700;
+  --fail: #d1242f;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --fg: #e6edf3;
+    --muted: #9198a1;
+    --border: #3d444d;
+    --code-bg: #262c36;
+    --note-bg: #121d2f;
+    --note-border: #4493f8;
+    --warn-bg: #272115;
+    --warn-border: #d29922;
+    --fail: #f85149;
+  }
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+main {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+}
+section {
+  margin-top: 1.5rem;
+}
+code {
+  background: var(--code-bg);
+  border-radius: 4px;
+  padding: 0.1em 0.3em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+.note {
+  background: var(--note-bg);
+  border-left: 4px solid var(--note-border);
+  padding: 0.5rem 1rem;
+}
+ol {
+  padding-left: 2rem;
+}
+li {
+  margin: 0 0 1.5rem;
+  padding-left: 0.5rem;
+}
+li p {
+  margin: 0 0 0.5rem;
+}
+li.warning {
+  background: var(--warn-bg);
+  border-left: 4px solid var(--warn-border);
+  padding: 0.5rem;
+}
+li.failed {
+  border-left: 4px solid var(--fail);
+}
+.approximate {
+  color: var(--muted);
+}
+.failed-here {
+  color: var(--fail);
+}
+figure {
+  margin: 0.5rem 0 0;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th, td {
+  text-align: left;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+a {
+  color: var(--note-border);
+}
+.status.incomplete {
+  color: var(--fail);
+  font-weight: 600;
+}
+</style>
+</head>
+<body>
+<main>
+<h1>QA Report</h1>
+<p>14 tests: 14 complete, 0 incomplete</p>
+<table>
+<thead>
+<tr><th>Test</th><th>Status</th><th>Jira text</th></tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="cart--add-credits-to-the-cart/qa-steps.html">Add credits to the cart</a></td>
+<td class="status complete">Complete</td>
+<td><a href="cart--add-credits-to-the-cart/qa-steps.txt">Jira text</a></td>
+</tr>
+<tr>
+<td><a href="certificates--add-three-recs-to-the-cart/qa-steps.html">Add three RECs to the cart</a></td>
+<td class="status complete">Complete</td>
+<td><a href="certificates--add-three-recs-to-the-cart/qa-steps.txt">Jira text</a></td>
+</tr>
+<tr>
+<td><a href="grouped--sign-in-with-good-credentials/qa-steps.html">Sign in with good credentials</a></td>
+<td class="status complete">Complete</td>
+<td><a href="grouped--sign-in-with-good-credentials/qa-steps.txt">Jira text</a></td>
+</tr>
+<tr>
+<td><a href="keyboard--move-from-username-to-password-with-tab/qa-steps.html">Move from Username to Password with Tab</a></td>
+<td class="status complete">Complete</td>
+<td><a href="keyboard--move-from-username-to-password-with-tab/qa-steps.txt">Jira text</a></td>
+</tr>
+<tr>
+<td><a href="login--sign-in-with-a-password/qa-steps.html">Sign in with a password</a></td>
+<td class="status complete">Complete</td>
+<td><a href="login--sign-in-with-a-password/qa-steps.txt">Jira text</a></td>
+</tr>
+<tr>
+<td><a href="long-page--order-boots-from-the-bottom-of-the-page/qa-steps.html">Order boots from the bottom of the page</a></td>
+<td class="status complete">Complete</td>
+<td><a href="long-page--order-boots-from-the-bottom-of-the-page/qa-steps.txt">Jira text</a></td>
+</tr>
+<tr>
+<td><a href="long-page--order-gift-cards-on-a-smoothly-scrolling-page/qa-steps.html">Order gift cards on a smoothly scrolling page</a></td>
+<td class="status complete">Complete</td>
+<td><a href="long-page--order-gift-cards-on-a-smoothly-scrolling-page/qa-steps.txt">Jira text</a></td>
+</tr>
+<tr>
+<td><a href="moving-ui--register-a-warranty-from-the-menu/qa-steps.html">Register a warranty from the menu</a></td>
+<td class="status complete">Complete</td>
+<td><a href="moving-ui--register-a-warranty-from-the-menu/qa-steps.txt">Jira text</a></td>
+</tr>
+<tr>
+<td><a href="scripted-page--open-collapsed-sections-on-a-page-without-any/qa-steps.html">Open collapsed sections on a page without any</a></td>
+<td class="status complete">Complete</td>
+<td><a href="scripted-page--open-collapsed-sections-on-a-page-without-any/qa-steps.txt">Jira text</a></td>
+</tr>
+<tr>
+<td><a href="scripted-page--read-the-faq/qa-steps.html">Read the FAQ</a></td>
+<td class="status complete">Complete</td>
+<td><a href="scripted-page--read-the-faq/qa-steps.txt">Jira text</a></td>
+</tr>
+<tr>
+<td><a href="scripted-page--subscribe-to-the-newsletter/qa-steps.html">Subscribe to the newsletter</a></td>
+<td class="status complete">Complete</td>
+<td><a href="scripted-page--subscribe-to-the-newsletter/qa-steps.txt">Jira text</a></td>
+</tr>
+<tr>
+<td><a href="selection--open-the-home-page/qa-steps.html">Open the home page</a></td>
+<td class="status complete">Complete</td>
+<td><a href="selection--open-the-home-page/qa-steps.txt">Jira text</a></td>
+</tr>
+<tr>
+<td><a href="selection--open-the-sign-in-page/qa-steps.html">Open the sign-in page</a></td>
+<td class="status complete">Complete</td>
+<td><a href="selection--open-the-sign-in-page/qa-steps.txt">Jira text</a></td>
+</tr>
+<tr>
+<td><a href="sign-in--sign-in-with-bad-credentials/qa-steps.html">Sign in with bad credentials</a></td>
+<td class="status complete">Complete</td>
+<td><a href="sign-in--sign-in-with-bad-credentials/qa-steps.txt">Jira text</a></td>
+</tr>
+</tbody>
+</table>
+</main>
+</body>
+</html>

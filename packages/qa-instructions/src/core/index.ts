@@ -77,6 +77,13 @@ export {
   type ImagePlacement,
   type RenderLayout,
 } from './bundle/renderer.js';
+export { QaReport, type QaReportOptions } from './report/qa-report.js';
+export {
+  QaReportIndexView,
+  type QaReportEntry,
+  type QaReportTest,
+} from './report/index-view.js';
+export { QaReportIndexHtml } from './report/index-html.js';
 export {
   render,
   renderQaSteps,

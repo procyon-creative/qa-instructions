@@ -1,5 +1,12 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -34,7 +41,7 @@ async function run(
   status: FullResult['status'] = 'passed',
 ): Promise<string[]> {
   const reporter = new QaInstructionsReporter(
-    { outputDir: out },
+    { outputFolder: out },
     undefined,
     undefined,
     undefined,
@@ -71,9 +78,13 @@ test('a full run removes the QA Instructions of a renamed test and keeps files i
 
     assert.deepEqual(await run(out, 'New title'), [
       'hand-made',
+      'index.html',
       'notes.txt',
       'sign-in--new-title',
     ]);
+    const index = await readFile(path.join(out, 'index.html'), 'utf8');
+    assert.match(index, /New title/);
+    assert.doesNotMatch(index, /Old title/);
   });
 });
 
@@ -89,9 +100,13 @@ test('a narrowed or interrupted run keeps earlier QA Instructions', async () => 
       await run(out, 'Old title');
 
       assert.deepEqual(await run(out, 'New title', argv, status), [
+        'index.html',
         'sign-in--new-title',
         'sign-in--old-title',
       ]);
+      // The index lists every test in the folder, kept ones included.
+      const index = await readFile(path.join(out, 'index.html'), 'utf8');
+      assert.match(index, /New title[\s\S]*Old title/);
     });
   }
 });

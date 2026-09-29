@@ -3,8 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "playwright test",
-    "render": "node ../../packages/qa-instructions/dist/cli/index.js render qa-runs --format qa-steps --out qa-steps-out"
+    "test": "playwright test"
   },
   "devDependencies": {
     "@procyon-creative/qa-instructions": "workspace:*",

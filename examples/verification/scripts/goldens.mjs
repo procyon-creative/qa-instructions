@@ -16,18 +16,30 @@ export const goldenDir = path.join(root, 'golden');
 
 export const bundleDirName = 'capture--login-error-flow';
 
+/** The QA Report the run wrote, with only the reporter line configured. */
+export const reportDir = path.join(root, 'qa-report');
+
 /**
- * The QA Steps text the reporter wrote beside the bundle (no render command
+ * The Jira-ready text in the test's QA Report directory (no render command
  * runs), and the golden file it must equal.
  */
 export const QA_STEPS = {
-  rendered: path.join(root, 'qa-runs', bundleDirName, 'qa-steps.txt'),
+  rendered: path.join(reportDir, bundleDirName, 'qa-steps.txt'),
   golden: path.join(goldenDir, 'qa-steps.txt'),
 };
 
+/** The QA Report's index and the golden file it must equal. */
+export const INDEX = {
+  rendered: path.join(reportDir, 'index.html'),
+  golden: path.join(goldenDir, 'index.html'),
+};
+
+/** The test's page in the QA Report, which the index links to. */
+export const PAGE = path.join(reportDir, bundleDirName, 'qa-steps.html');
+
 /** Collected bundle and the golden file it must equal once normalized. */
 export const BUNDLE = {
-  collected: path.join(root, 'qa-runs', bundleDirName, 'bundle.json'),
+  collected: path.join(reportDir, bundleDirName, 'bundle.json'),
   golden: path.join(goldenDir, 'bundle.json'),
 };
 

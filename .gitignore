@@ -2,9 +2,9 @@ node_modules/
 dist/
 dist-test/
 .astro/
-qa-runs/
-qa-runs-selection/
-qa-runs-no-trace/
+qa-report/
+qa-report-selection/
+qa-report-no-trace/
 qa-steps-out/
 playwright-report/
 test-results/

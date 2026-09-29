@@ -4,7 +4,14 @@ import path from 'node:path';
 import { fixtureOrigin } from '@qa-instructions/fixture-site/origin';
 import sharp from 'sharp';
 
+import {
+  brokenIndexLinks,
+  readReportIndex,
+} from '../../derived-steps/scripts/report-index.mjs';
 import { GOLDENS, derivedSteps, root } from './shared.mjs';
+
+/** The QA Report the run wrote, with no render step. */
+const report = path.join(root, 'qa-report');
 
 // The derived-steps tests on Playwright 1.56 must read exactly like the 1.63
 // goldens, and every QA Step must have a Step Screenshot from the trace's
@@ -62,10 +69,10 @@ for (const name of GOLDENS) {
   let actual;
   try {
     actual = fixtureOrigin.canonicalize(
-      await readFile(path.join(root, 'qa-steps-out', `${name}.txt`), 'utf8'),
+      await readFile(path.join(report, name, 'qa-steps.txt'), 'utf8'),
     );
   } catch (error) {
-    fail(`missing rendered output for ${name}: ${error.message}`);
+    fail(`missing Jira text in the QA Report for ${name}: ${error.message}`);
     continue;
   }
   if (actual !== golden) {
@@ -77,16 +84,23 @@ for (const name of GOLDENS) {
   }
 }
 
-const bundleDirs = await readdir(path.join(root, 'qa-runs'));
+const bundleDirs = await readdir(report);
 for (const name of GOLDENS) {
   if (!bundleDirs.includes(name)) {
     fail(`no bundle for ${name}`);
     continue;
   }
-  const dir = path.join(root, 'qa-runs', name);
+  const dir = path.join(report, name);
   const bundle = JSON.parse(
     await readFile(path.join(dir, 'bundle.json'), 'utf8'),
   );
+  // The test's page shows every Step Screenshot, embedded.
+  const page = await readFile(path.join(dir, 'qa-steps.html'), 'utf8');
+  const shown = page.match(/src="data:image\/\w+;base64,/g)?.length ?? 0;
+  const screenshots = bundle.steps.filter((s) => s.assetIds?.length).length;
+  if (shown !== screenshots) {
+    fail(`${name}: its page shows ${shown} of ${screenshots} screenshots`);
+  }
   for (const step of bundle.steps) {
     const label = `${name} step ${step.index}`;
     if (!step.assetIds?.length && mayLackScreenshot(name, step)) continue;
@@ -165,7 +179,7 @@ async function countColor(data, rgb) {
 }
 
 if (bundleDirs.includes(LONG_PAGE)) {
-  const dir = path.join(root, 'qa-runs', LONG_PAGE);
+  const dir = path.join(report, LONG_PAGE);
   const bundle = JSON.parse(
     await readFile(path.join(dir, 'bundle.json'), 'utf8'),
   );
@@ -204,7 +218,7 @@ if (bundleDirs.includes(LONG_PAGE)) {
 const FORM = [255, 212, 0];
 
 if (bundleDirs.includes(GIFT_CARDS)) {
-  const dir = path.join(root, 'qa-runs', GIFT_CARDS);
+  const dir = path.join(report, GIFT_CARDS);
   const bundle = JSON.parse(
     await readFile(path.join(dir, 'bundle.json'), 'utf8'),
   );
@@ -225,7 +239,26 @@ if (bundleDirs.includes(GIFT_CARDS)) {
   }
 }
 
+// The QA Report's index lists every test, all complete, in directory order,
+// and every link leads to a file.
+try {
+  const listed = (await readReportIndex(report)).map(
+    ({ page, status }) => `${path.dirname(page)} ${status}`,
+  );
+  const expected = [...GOLDENS].sort().map((name) => `${name} complete`);
+  if (JSON.stringify(listed) !== JSON.stringify(expected)) {
+    fail(
+      `index.html lists ${JSON.stringify(listed)}, expected ${JSON.stringify(expected)}`,
+    );
+  }
+  for (const link of await brokenIndexLinks(report)) {
+    fail(`index.html links to ${link}, which does not exist`);
+  }
+} catch (error) {
+  fail(`index.html: ${error.message}`);
+}
+
 if (failed) process.exit(1);
 console.log(
-  `verify-run: ok (${GOLDENS.length} 1.63 golden(s) matched on Playwright 1.56, with Step Screenshots; ${markedClicks} click point(s) marked)`,
+  `verify-run: ok (${GOLDENS.length} 1.63 golden(s) matched on Playwright 1.56, with Step Screenshots on each page; the index lists every test; ${markedClicks} click point(s) marked)`,
 );

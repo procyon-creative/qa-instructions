@@ -3,6 +3,7 @@ import { InlineMarkup } from './inline-markup.js';
 
 /** Words every format shows the same way, so the formats never drift apart. */
 export const QaWording = {
+  complete: 'Complete',
   incomplete: 'Incomplete',
   warning: 'Warning',
   expected: 'Expected',

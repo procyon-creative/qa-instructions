@@ -10,7 +10,7 @@ export default defineConfig(base, {
     ['list'],
     [
       '@procyon-creative/qa-instructions/playwright',
-      { outputDir: 'qa-runs-selection', select: { tags: ['@qa'] } },
+      { outputFolder: 'qa-report-selection', select: { tags: ['@qa'] } },
     ],
   ],
 });

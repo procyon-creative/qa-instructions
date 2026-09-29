@@ -13,6 +13,8 @@ ADR 0001's rule is unchanged: the core is runner-independent, and runner adapter
 
 Rendering stays in one place: the core's `BundleRenderer` reads a bundle and writes one format, placed by a layout. The reporter uses it with the in-bundle layout (`<outputDir>/<test>/qa-steps.txt`, `.md` linking the bundle's `assets/`, `.html`); the command uses it with the output-directory layout (`<out>/<test>.txt`).
 
+_Update (ADR 0003):_ the reporter's folder is now `outputFolder` (default `qa-report/`), and the command no longer writes a separate output directory: `qa-instructions render <folder>` regenerates the QA Report in place, with the same layout a run writes.
+
 ## Future adapters
 
 A Jest adapter would be a `src/jest/` folder and a `./jest` entry point beside `./playwright`, feeding the same core port, with `jest` as another optional peer. If an adapter ever brings a heavy dependency that users of the other runner should not install, that adapter can move to its own package then.

@@ -1,7 +1,9 @@
-import { readFile } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 
 import {
   BUNDLE,
+  INDEX,
+  PAGE,
   QA_STEPS,
   bundleDirName,
   readNormalizedBundle,
@@ -39,6 +41,17 @@ try {
   }
 } catch (error) {
   fail(`qa-steps output missing or unreadable: ${error.message}`);
+}
+
+try {
+  const index = await readFile(INDEX.rendered, 'utf8');
+  if (index !== (await readFile(INDEX.golden, 'utf8'))) {
+    fail('the QA Report index does not match golden/index.html');
+    console.error(index);
+  }
+  await access(PAGE);
+} catch (error) {
+  fail(`QA Report missing or unreadable: ${error.message}`);
 }
 
 if (process.exitCode) process.exit(process.exitCode);

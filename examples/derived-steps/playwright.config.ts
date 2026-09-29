@@ -20,25 +20,27 @@ export default defineConfig({
   testDir: './tests',
   reporter: [
     ['list'],
-    // Default presentation of test.step groups: Sections.
+    // The QA Report in qa-report/ (the default folder), with the default
+    // presentation of test.step groups: Sections. Markdown is added so its
+    // goldens are checked too.
     [
       '@procyon-creative/qa-instructions/playwright',
-      { outputDir: 'qa-runs', mask },
+      { mask, formats: ['markdown'] },
     ],
     [
       '@procyon-creative/qa-instructions/playwright',
-      { outputDir: 'qa-runs/collapse', testSteps: 'collapse', mask },
+      { outputFolder: 'qa-report/collapse', testSteps: 'collapse', mask },
     ],
     [
       '@procyon-creative/qa-instructions/playwright',
-      { outputDir: 'qa-runs/ignore', testSteps: 'ignore', mask },
+      { outputFolder: 'qa-report/ignore', testSteps: 'ignore', mask },
     ],
     ...highlightStyles.map(
       (highlight) =>
         [
           '@procyon-creative/qa-instructions/playwright',
           {
-            outputDir: `qa-runs/styles/${highlight}`,
+            outputFolder: `qa-report/styles/${highlight}`,
             highlight,
             select: { files: ['moving-ui.spec.ts'] },
           },

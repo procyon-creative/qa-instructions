@@ -2,16 +2,16 @@
 
 1. Open http://127.0.0.1:4321/faq
 
-   ![Step 1: Open http://127.0.0.1:4321/faq](scripted-page--read-the-faq/step-01.png)
+   ![Step 1: Open http://127.0.0.1:4321/faq](assets/step-01.png)
 
 2. **Warning:** The test opened the **Shipping** and **Returns** sections with a script instead of a user action. Click each one to open it if it is closed.
 
    **Expected:** **Orders ship within 2 business days.** is visible
 
-   ![Step 2: The test opened the Shipping and Returns sections with a script instead of a user action. Click each one to open it if it is closed.](scripted-page--read-the-faq/step-02.png)
+   ![Step 2: The test opened the Shipping and Returns sections with a script instead of a user action. Click each one to open it if it is closed.](assets/step-02.png)
 
 3. **Warning:** The test clicked the **Show contact details** button with a script instead of a user action. Click it yourself to continue.
 
    **Expected:** **Email help@example.com** is visible
 
-   ![Step 3: The test clicked the Show contact details button with a script instead of a user action. Click it yourself to continue.](scripted-page--read-the-faq/step-03.png)
+   ![Step 3: The test clicked the Show contact details button with a script instead of a user action. Click it yourself to continue.](assets/step-03.png)

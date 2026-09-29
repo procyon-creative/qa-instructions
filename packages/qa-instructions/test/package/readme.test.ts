@@ -4,7 +4,13 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { DEFAULT_HIGHLIGHT, RENDER_FORMATS } from '../../src/core/index.js';
+import { RenderCommand } from '../../src/cli/render.js';
+import {
+  DEFAULT_HIGHLIGHT,
+  QaReport,
+  RENDER_FORMATS,
+} from '../../src/core/index.js';
+import { PlaywrightOutputFolder } from '../../src/playwright/output-folder.js';
 
 // Tests run from dist-test/test/package/, three levels below the package root.
 const packageRoot = path.resolve(
@@ -66,17 +72,15 @@ test('README states the default highlight', async () => {
   assert.ok(section.includes(`[${quoted}]`));
 });
 
-test('README lists every render format', async () => {
+test('README documents the render command with every format', async () => {
   const section = await readmeSection('Render');
+  assert.ok(section.includes(`npx ${RenderCommand.USAGE}`));
   for (const format of RENDER_FORMATS) {
-    assert.ok(
-      section.includes(`| \`${format}\``),
-      `README "Render" omits ${format}`,
-    );
+    assert.ok(section.includes(format), `README "Render" omits ${format}`);
   }
 });
 
-test('README lists every format the formats option takes, and its default', async () => {
+test('README lists every format the formats option takes, and what every test gets anyway', async () => {
   const section = await readmeSection('Reporter options');
   const formats = section.slice(section.indexOf('### `formats`'));
   for (const format of RENDER_FORMATS) {
@@ -85,7 +89,23 @@ test('README lists every format the formats option takes, and its default', asyn
       `README "formats" omits ${format}`,
     );
   }
-  assert.ok(section.includes("`['qa-steps']`"));
+  for (const format of QaReport.FORMATS) {
+    assert.match(
+      formats,
+      new RegExp(`\\| \`${format}\` +\\|[^\\n]*\\| Always`),
+      `README "formats" does not say ${format} is always written`,
+    );
+  }
+});
+
+test('README states the QA Report output folder default', async () => {
+  const section = await readmeSection('Reporter options');
+  assert.match(
+    section,
+    new RegExp(
+      `\\| \`outputFolder\` +\\| \`string\` +\\| \`'${PlaywrightOutputFolder.DEFAULT}'\``,
+    ),
+  );
 });
 
 test('README states the peer dependency Playwright range', async () => {

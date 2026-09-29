@@ -13,10 +13,8 @@ export default defineConfig({
   testDir: './tests',
   reporter: [
     ['list'],
-    [
-      '@procyon-creative/qa-instructions/playwright',
-      { outputDir: 'qa-runs', mask },
-    ],
+    // The QA Report in qa-report/, the default folder.
+    ['@procyon-creative/qa-instructions/playwright', { mask }],
   ],
   use: {
     baseURL,
