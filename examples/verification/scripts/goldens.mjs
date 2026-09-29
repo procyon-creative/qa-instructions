@@ -16,8 +16,11 @@ export const goldenDir = path.join(root, 'golden');
 
 export const bundleDirName = 'capture--login-error-flow';
 
-/** The QA Report the run wrote, with only the reporter line configured. */
-export const reportDir = path.join(root, 'qa-report');
+/**
+ * The QA Report the run wrote, with only the reporter line configured: in
+ * Playwright's default `outputDir`.
+ */
+export const reportDir = path.join(root, 'test-results', 'qa-report');
 
 /**
  * The Jira-ready text in the test's QA Report directory (no render command

@@ -5,11 +5,12 @@
   "scripts": {
     "test": "playwright test",
     "test:2x": "playwright test --config playwright.2x.config.ts",
+    "test:variants": "node scripts/run-variants.mjs",
     "test:failing": "node scripts/run-failing.mjs",
     "verify": "node scripts/verify-run.mjs",
     "verify:update-goldens": "node scripts/update-goldens.mjs",
-    "e2e:selection": "rm -rf qa-report-selection && playwright test --config playwright.selection.config.ts && node scripts/verify-selection.mjs",
-    "e2e": "pnpm test && pnpm test:2x && pnpm test:failing && pnpm verify && pnpm e2e:selection"
+    "e2e:selection": "playwright test --config playwright.selection.config.ts && node scripts/verify-selection.mjs",
+    "e2e": "pnpm test && pnpm test:2x && pnpm test:variants && pnpm test:failing && pnpm verify && pnpm e2e:selection"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

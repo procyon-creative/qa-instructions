@@ -10,8 +10,11 @@ import {
 } from '../../derived-steps/scripts/report-index.mjs';
 import { GOLDENS, derivedSteps, root } from './shared.mjs';
 
-/** The QA Report the run wrote, with no render step. */
-const report = path.join(root, 'qa-report');
+/**
+ * The QA Report the run wrote, with no render step: in Playwright's default
+ * `outputDir`.
+ */
+const report = path.join(root, 'test-results', 'qa-report');
 
 // The derived-steps tests on Playwright 1.56 must read exactly like the 1.63
 // goldens, and every QA Step must have a Step Screenshot from the trace's

@@ -21,7 +21,7 @@ export default defineConfig({
 });
 ```
 
-Run your tests as usual. Every run leaves a QA Report in `qa-report/`: open `index.html` to browse every test's QA Instructions with screenshots, and paste each test's Jira-ready `qa-steps.txt` into its ticket. No second command is needed.
+Run your tests as usual. Every run leaves a QA Report in `test-results/qa-report/` (inside Playwright's `outputDir`): open `index.html` to browse every test's QA Instructions with screenshots, and paste each test's Jira-ready `qa-steps.txt` into its ticket. No second command is needed.
 
 Reporter options, the QA Report layout, and the `render` command are documented in the [project README](https://github.com/procyon-creative/qa-instructions#readme).
 

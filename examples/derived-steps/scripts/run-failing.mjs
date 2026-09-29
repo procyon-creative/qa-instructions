@@ -10,7 +10,7 @@ import {
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { root } from './goldens.mjs';
+import { reportOf, root } from './goldens.mjs';
 
 // Runs the deliberately failing tests (with retries) and asserts the run
 // fails as expected, yielding one bundle per test that ran despite the
@@ -22,12 +22,12 @@ import { root } from './goldens.mjs';
 // report. Stand-ins for the commands a browser is opened with (`open`,
 // `xdg-open`) come first on PATH and record any call.
 
-const bundlesDir = path.join(root, 'qa-report', 'failing');
+const bundlesDir = path.join(root, reportOf('failing'));
 const expectedBundles = 5;
+// The hint names where the run really wrote the QA Report: inside its
+// Playwright outputDir.
 const HINT =
-  'To open last QA Report run:\n\n  pnpm exec qa-instructions show-report qa-report/failing\n';
-
-await rm(bundlesDir, { recursive: true, force: true });
+  'To open last QA Report run:\n\n  pnpm exec qa-instructions show-report test-results/failing/qa-report\n';
 
 const shims = await mkdtemp(path.join(tmpdir(), 'qa-open-shims-'));
 const openLog = path.join(shims, 'opened.log');

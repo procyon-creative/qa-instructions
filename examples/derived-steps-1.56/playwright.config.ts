@@ -13,8 +13,8 @@ export default defineConfig({
   testDir: './tests',
   reporter: [
     ['list'],
-    // The QA Report in qa-report/, the default folder, never opened in a
-    // browser: scripts check it.
+    // The QA Report in test-results/qa-report/ (inside Playwright's default
+    // outputDir), never opened in a browser: scripts check it.
     ['@procyon-creative/qa-instructions/playwright', { mask, open: 'never' }],
   ],
   use: {

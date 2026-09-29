@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 import type {
+  FullConfig,
   FullResult,
   Suite,
   TestCase,
@@ -67,6 +68,33 @@ function mockTestCase(tags: string[] = []): TestCase {
   } as unknown as TestCase;
 }
 
+/**
+ * A run config, as `onBegin` receives it, whose one project writes to
+ * Playwright's `outputDir` of `outputDir`.
+ */
+function runConfig(outputDir: string, config: object = {}): FullConfig {
+  return {
+    version: '1.63.0',
+    projects: [{ name: 'chromium', outputDir }],
+    ...config,
+  } as unknown as FullConfig;
+}
+
+/**
+ * A temporary Playwright `outputDir` and the QA Report folder inside it,
+ * removed after `body`.
+ */
+async function withOutputDir<T>(
+  body: (outputDir: string, out: string) => Promise<T>,
+): Promise<T> {
+  const outputDir = await mkdtemp(path.join(tmpdir(), 'qa-reporter-'));
+  try {
+    return await body(outputDir, path.join(outputDir, 'qa-report'));
+  } finally {
+    await rm(outputDir, { recursive: true, force: true });
+  }
+}
+
 /** The test directories in a QA Report folder (leaving out `index.html`). */
 async function testDirs(out: string): Promise<string[]> {
   return (await readdir(out, { withFileTypes: true }))
@@ -87,12 +115,9 @@ async function runAttempts(
   /** The QA Report's `index.html`. */
   index: string;
 }> {
-  const out = await mkdtemp(path.join(tmpdir(), 'qa-reporter-'));
-  try {
-    const reporter = new QaInstructionsReporter({
-      ...options,
-      outputFolder: out,
-    });
+  return withOutputDir(async (outputDir, out) => {
+    const reporter = new QaInstructionsReporter(options);
+    reporter.onBegin(runConfig(outputDir));
     for (const {
       status = 'passed',
       retry = 0,
@@ -121,9 +146,7 @@ async function runAttempts(
       rendered,
       index: await readFile(path.join(out, 'index.html'), 'utf8'),
     };
-  } finally {
-    await rm(out, { recursive: true, force: true });
-  }
+  });
 }
 
 async function runReporter(
@@ -269,9 +292,9 @@ test('a failed soft check flags its QA Step and the later QA Steps still follow'
 });
 
 test('a skipped test yields no QA Instructions, only an empty index', async () => {
-  const out = await mkdtemp(path.join(tmpdir(), 'qa-reporter-'));
-  try {
-    const reporter = new QaInstructionsReporter({ outputFolder: out });
+  await withOutputDir(async (outputDir, out) => {
+    const reporter = new QaInstructionsReporter();
+    reporter.onBegin(runConfig(outputDir));
     await reporter.onTestEnd(mockTestCase(), {
       status: 'skipped',
       retry: 0,
@@ -280,9 +303,7 @@ test('a skipped test yields no QA Instructions, only an empty index', async () =
     } as unknown as TestResult);
     await reporter.onEnd();
     assert.deepEqual(await readdir(out), ['index.html']);
-  } finally {
-    await rm(out, { recursive: true, force: true });
-  }
+  });
 });
 
 test('an error thrown outside any browser call still ends the QA Steps', async () => {
@@ -477,12 +498,9 @@ async function bundleDirsAfterRun(
   options: ConstructorParameters<typeof QaInstructionsReporter>[0],
   tags: string[],
 ): Promise<string[]> {
-  const out = await mkdtemp(path.join(tmpdir(), 'qa-reporter-'));
-  try {
-    const reporter = new QaInstructionsReporter({
-      ...options,
-      outputFolder: out,
-    });
+  return withOutputDir(async (outputDir, out) => {
+    const reporter = new QaInstructionsReporter(options);
+    reporter.onBegin(runConfig(outputDir));
     await reporter.onTestEnd(mockTestCase(tags), {
       status: 'passed',
       retry: 0,
@@ -493,9 +511,7 @@ async function bundleDirsAfterRun(
     } as unknown as TestResult);
     await reporter.onEnd();
     return await testDirs(out);
-  } finally {
-    await rm(out, { recursive: true, force: true });
-  }
+  });
 }
 
 test('reporter selects tests by the tags Playwright reports', async () => {
@@ -1042,9 +1058,9 @@ async function writtenText(dir: string): Promise<string> {
 }
 
 test('a value typed into a password field, as the trace recorded the page, is never written', async () => {
-  const out = await mkdtemp(path.join(tmpdir(), 'qa-reporter-'));
-  try {
-    const reporter = new QaInstructionsReporter({ outputFolder: out });
+  await withOutputDir(async (outputDir, out) => {
+    const reporter = new QaInstructionsReporter();
+    reporter.onBegin(runConfig(outputDir));
     await reporter.onTestEnd(mockTestCase(), {
       status: 'passed',
       retry: 0,
@@ -1083,9 +1099,7 @@ test('a value typed into a password field, as the trace recorded the page, is ne
       ],
     );
     assert.ok(!(await writtenText(out)).includes('hunter2'));
-  } finally {
-    await rm(out, { recursive: true, force: true });
-  }
+  });
 });
 
 test('reporter masks the values and patterns in its mask option', async () => {
@@ -1116,9 +1130,8 @@ test('reporter masks the values and patterns in its mask option', async () => {
 });
 
 test('reporter never throws into the test run', async () => {
-  const reporter = new QaInstructionsReporter({
-    outputFolder: '/dev/null/cannot-write-here',
-  });
+  const reporter = new QaInstructionsReporter();
+  reporter.onBegin(runConfig('/dev/null/cannot-write-here'));
   const warn = console.warn;
   console.warn = () => {};
   try {
@@ -1147,34 +1160,34 @@ async function warningsOfRun(
   const warnings: string[] = [];
   const warn = console.warn;
   console.warn = (message: unknown) => warnings.push(String(message));
-  const out = await mkdtemp(path.join(tmpdir(), 'qa-reporter-'));
   try {
-    const reporter = new QaInstructionsReporter({ outputFolder: out });
-    reporter.onBegin({ version } as never);
-    for (const title of ['first', 'second']) {
-      reporter.onTestEnd(
-        { ...mockTestCase(), id: title, title } as TestCase,
-        {
-          status: 'passed',
-          retry: 0,
-          attachments,
-          steps: sampleSteps.map(step),
-        } as unknown as TestResult,
-      );
-    }
-    await reporter.onEnd();
-    const dir = path.join(out, (await testDirs(out))[0]);
-    const bundle = JSON.parse(
-      await readFile(path.join(dir, 'bundle.json'), 'utf8'),
-    ) as QaRunBundle;
-    return {
-      warnings,
-      assetFiles: await readdir(path.join(dir, 'assets')),
-      steps: bundle.steps.length,
-    };
+    return await withOutputDir(async (outputDir, out) => {
+      const reporter = new QaInstructionsReporter();
+      reporter.onBegin(runConfig(outputDir, { version }));
+      for (const title of ['first', 'second']) {
+        reporter.onTestEnd(
+          { ...mockTestCase(), id: title, title } as TestCase,
+          {
+            status: 'passed',
+            retry: 0,
+            attachments,
+            steps: sampleSteps.map(step),
+          } as unknown as TestResult,
+        );
+      }
+      await reporter.onEnd();
+      const dir = path.join(out, (await testDirs(out))[0]);
+      const bundle = JSON.parse(
+        await readFile(path.join(dir, 'bundle.json'), 'utf8'),
+      ) as QaRunBundle;
+      return {
+        warnings,
+        assetFiles: await readdir(path.join(dir, 'assets')),
+        steps: bundle.steps.length,
+      };
+    });
   } finally {
     console.warn = warn;
-    await rm(out, { recursive: true, force: true });
   }
 }
 
@@ -1234,30 +1247,30 @@ test('an error in any reporter hook never reaches the test run and is logged onc
   const warnings: string[] = [];
   const warn = console.warn;
   console.warn = (message: unknown) => warnings.push(String(message));
-  const out = await mkdtemp(path.join(tmpdir(), 'qa-reporter-'));
   try {
-    const broken = {
-      testStart: () => {
-        throw new Error('broken translator');
-      },
-    } as unknown as ConstructorParameters<typeof QaInstructionsReporter>[1];
-    const reporter = new QaInstructionsReporter({ outputFolder: out }, broken);
-    reporter.onBegin(undefined as never);
-    for (const title of ['first', 'second']) {
-      reporter.onTestEnd(
-        { ...mockTestCase(), title } as TestCase,
-        {
-          status: 'passed',
-          retry: 0,
-          attachments: [],
-          steps: [],
-        } as unknown as TestResult,
-      );
-    }
-    await reporter.onEnd();
+    await withOutputDir(async (outputDir) => {
+      const broken = {
+        testStart: () => {
+          throw new Error('broken translator');
+        },
+      } as unknown as ConstructorParameters<typeof QaInstructionsReporter>[1];
+      const reporter = new QaInstructionsReporter({}, broken);
+      reporter.onBegin(runConfig(outputDir));
+      for (const title of ['first', 'second']) {
+        reporter.onTestEnd(
+          { ...mockTestCase(), title } as TestCase,
+          {
+            status: 'passed',
+            retry: 0,
+            attachments: [],
+            steps: [],
+          } as unknown as TestResult,
+        );
+      }
+      await reporter.onEnd();
+    });
   } finally {
     console.warn = warn;
-    await rm(out, { recursive: true, force: true });
   }
   assert.equal(warnings.length, 1);
   assert.match(warnings[0], /broken translator/);
@@ -1267,12 +1280,32 @@ test('bad reporter options never stop the test run', async () => {
   const warnings: string[] = [];
   const warn = console.warn;
   console.warn = (message: unknown) => warnings.push(String(message));
-  const out = await mkdtemp(path.join(tmpdir(), 'qa-reporter-'));
   try {
-    const reporter = new QaInstructionsReporter({
-      outputFolder: out,
-      select: { files: 'tests/*.spec.ts' },
-    } as unknown as QaInstructionsReporterOptions);
+    await withOutputDir(async (outputDir, out) => {
+      const reporter = new QaInstructionsReporter({
+        select: { files: 'tests/*.spec.ts' },
+      } as unknown as QaInstructionsReporterOptions);
+      reporter.onBegin(runConfig(outputDir));
+      reporter.onTestEnd(mockTestCase(), {
+        status: 'passed',
+        retry: 0,
+        attachments: [],
+        steps: [step(navigate)],
+      } as unknown as TestResult);
+      await reporter.onEnd();
+      // The bad option is ignored: every test is selected.
+      assert.equal((await testDirs(out)).length, 1);
+    });
+  } finally {
+    console.warn = warn;
+  }
+  assert.equal(warnings.filter((w) => /select/.test(w)).length, 1);
+});
+
+test("the QA Report goes in qa-report inside Playwright's outputDir", async () => {
+  await withOutputDir(async (outputDir) => {
+    const reporter = new QaInstructionsReporter();
+    reporter.onBegin(runConfig(outputDir));
     reporter.onTestEnd(mockTestCase(), {
       status: 'passed',
       retry: 0,
@@ -1280,13 +1313,40 @@ test('bad reporter options never stop the test run', async () => {
       steps: [step(navigate)],
     } as unknown as TestResult);
     await reporter.onEnd();
-    // The bad option is ignored: every test is selected.
-    assert.equal((await testDirs(out)).length, 1);
+    assert.deepEqual(await readdir(outputDir), ['qa-report']);
+    assert.deepEqual(await readdir(path.join(outputDir, 'qa-report')), [
+      'index.html',
+      'sign-in--sign-in-with-bad-credentials',
+    ]);
+  });
+});
+
+test('the removed outputFolder option is ignored, with one warning', async () => {
+  const warnings: string[] = [];
+  const warn = console.warn;
+  console.warn = (message: unknown) => warnings.push(String(message));
+  try {
+    await withOutputDir(async (outputDir) => {
+      const elsewhere = path.join(outputDir, 'elsewhere');
+      const reporter = new QaInstructionsReporter({
+        outputFolder: elsewhere,
+      } as unknown as QaInstructionsReporterOptions);
+      reporter.onBegin(runConfig(outputDir));
+      reporter.onTestEnd(mockTestCase(), {
+        status: 'passed',
+        retry: 0,
+        attachments: [],
+        steps: [step(navigate)],
+      } as unknown as TestResult);
+      await reporter.onEnd();
+      assert.deepEqual(await readdir(outputDir), ['qa-report']);
+    });
   } finally {
     console.warn = warn;
-    await rm(out, { recursive: true, force: true });
   }
-  assert.equal(warnings.filter((w) => /select/.test(w)).length, 1);
+  const about = warnings.filter((w) => /"outputFolder"/.test(w));
+  assert.equal(about.length, 1);
+  assert.match(about[0], /outputDir/);
 });
 
 /** A suite whose tests have the given outcomes, as `onBegin` receives it. */
@@ -1345,26 +1405,26 @@ async function openingOfRun(
   let open: QaReportOpen | undefined;
   const warn = console.warn;
   console.warn = (message: unknown) => warnings.push(String(message));
-  const out = await mkdtemp(path.join(tmpdir(), 'qa-reporter-'));
   try {
-    const opener = recordingOpener(opening, environment);
-    const reporter = reporterOpening({ ...options, outputFolder: out }, (o) => {
-      open = o;
-      return opener(o);
+    return await withOutputDir(async (outputDir, out) => {
+      const opener = recordingOpener(opening, environment);
+      const reporter = reporterOpening(options, (o) => {
+        open = o;
+        return opener(o);
+      });
+      reporter.onBegin(runConfig(outputDir), suite);
+      reporter.onTestEnd(mockTestCase(), {
+        status: 'passed',
+        retry: 0,
+        attachments: [],
+        steps: [step(navigate)],
+      } as unknown as TestResult);
+      await reporter.onEnd({ status: 'passed' } as FullResult);
+      await reporter.onExit();
+      return { ...opening, out, open, warnings };
     });
-    reporter.onBegin({ version: '1.63.0' } as never, suite);
-    reporter.onTestEnd(mockTestCase(), {
-      status: 'passed',
-      retry: 0,
-      attachments: [],
-      steps: [step(navigate)],
-    } as unknown as TestResult);
-    await reporter.onEnd({ status: 'passed' } as FullResult);
-    await reporter.onExit();
-    return { ...opening, out, open, warnings };
   } finally {
     console.warn = warn;
-    await rm(out, { recursive: true, force: true });
   }
 }
 
@@ -1423,9 +1483,10 @@ test('with no QA Report written, exit prints and opens nothing', async () => {
   console.warn = () => {};
   try {
     const reporter = reporterOpening(
-      { outputFolder: '/dev/null/cannot-write-here', open: 'always' },
+      { open: 'always' },
       recordingOpener(opening),
     );
+    reporter.onBegin(runConfig('/dev/null/cannot-write-here'));
     await reporter.onEnd();
     await reporter.onExit();
   } finally {

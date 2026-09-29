@@ -7,11 +7,11 @@ import { PNG } from 'pngjs';
 import {
   GOLDENS,
   OUTPUT_DIRS,
-  REPORT,
   REPORT_FOLDERS,
   SCREENSHOT_GOLDENS,
   SECRETS,
   normalizeRendered,
+  reportOf,
   root,
 } from './goldens.mjs';
 import { brokenIndexLinks, readReportIndex } from './report-index.mjs';
@@ -108,8 +108,17 @@ async function verifyScreenshots(goldenFile) {
   }
 }
 
+/**
+ * `bundleDirName` is `[<run>/]<test>`: the test's directory in the QA Report
+ * of the run named (see `reportOf`), else of the main run.
+ */
 async function verifyBundleScreenshots(golden, bundleDirName) {
-  const bundleDir = path.join(root, REPORT, bundleDirName);
+  const run = path.posix.dirname(bundleDirName);
+  const bundleDir = path.join(
+    root,
+    reportOf(run === '.' ? '' : run),
+    path.posix.basename(bundleDirName),
+  );
   const bundle = JSON.parse(
     await readFile(path.join(bundleDir, 'bundle.json'), 'utf8'),
   );

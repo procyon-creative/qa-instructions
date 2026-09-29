@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { readFile, readdir, rm } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 
 import { GOLDENS, root, syncSpecs } from './shared.mjs';
@@ -11,8 +11,8 @@ import { GOLDENS, root, syncSpecs } from './shared.mjs';
 const WARNING =
   "no trace was recorded, so QA Instructions have no Step Screenshots. Add this to playwright.config to get them: use: { trace: 'on' }";
 
-const bundlesDir = path.join(root, 'qa-report-no-trace');
-await rm(bundlesDir, { recursive: true, force: true });
+/** The QA Report in the run's own `outputDir`, apart from the main run's. */
+const bundlesDir = path.join(root, 'test-results', 'no-trace', 'qa-report');
 await syncSpecs();
 
 const run = spawnSync(
