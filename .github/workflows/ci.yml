@@ -23,6 +23,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Lints .github/workflows/ (the image bundles shellcheck for run: blocks).
+      - uses: docker://rhysd/actionlint:1.7.12
+        with:
+          args: -color
+
       - uses: pnpm/action-setup@v6
         with:
           version: 9
