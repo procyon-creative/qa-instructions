@@ -53,6 +53,12 @@ export const GOLDENS = [
     rendered: 'qa-steps-out/login--sign-in-with-a-password.txt',
     golden: 'golden/login--sign-in-with-a-password.txt',
   },
+  // A key press with a checked effect: Tab moves focus to Password.
+  {
+    rendered:
+      'qa-steps-out/keyboard--move-from-username-to-password-with-tab.txt',
+    golden: 'golden/keyboard--move-from-username-to-password-with-tab.txt',
+  },
   {
     rendered: 'qa-steps-out/scripted-page--read-the-faq.txt',
     golden: 'golden/scripted-page--read-the-faq.txt',
