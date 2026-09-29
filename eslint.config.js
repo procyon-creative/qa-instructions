@@ -9,7 +9,9 @@ export default tseslint.config(
   {
     // The core is runner-independent (ADR 0001, ADR 0002): no test runner,
     // even for types, no drawing library (Highlights are drawn behind a
-    // port), and nothing from the runner adapters or the CLI beside it.
+    // port), no browser launcher (how a report opens is the runner adapter's
+    // convention, ADR 0003), and nothing from the runner adapters or the CLI
+    // beside it.
     files: [
       'packages/qa-instructions/src/core/**/*.ts',
       'packages/qa-instructions/test/core/**/*.ts',
@@ -18,6 +20,7 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         {
+          paths: ['open'],
           patterns: [
             '@playwright/*',
             'playwright',

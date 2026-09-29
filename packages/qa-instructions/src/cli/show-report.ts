@@ -1,4 +1,5 @@
 import { QaReportViewer } from '../core/index.js';
+import { openInBrowser } from '../playwright/browser.js';
 import { PlaywrightOutputFolder } from '../playwright/output-folder.js';
 
 /**
@@ -8,7 +9,7 @@ import { PlaywrightOutputFolder } from '../playwright/output-folder.js';
  */
 export class ShowReportCommand {
   constructor(
-    private readonly viewer = new QaReportViewer(),
+    private readonly viewer = new QaReportViewer(openInBrowser),
     private readonly cwd = process.cwd(),
     private readonly print: (text: string) => void = (text) =>
       console.log(text),

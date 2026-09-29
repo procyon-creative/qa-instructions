@@ -8,22 +8,18 @@ import type {
 } from '@playwright/test/reporter';
 import {
   HighlightPlanner,
-  isQaReportOpen,
   isRenderFormat,
   QaInstructionsRecorder,
   QaInstructionsRun,
   QaReport,
   QaReportOpener,
-  QaReportOpenRule,
   QaReportViewer,
-  RunEnvironment,
   SecretMasker,
   StaleBundlePolicy,
   StepScreenshotHighlighter,
   TestSelection,
   type HighlightStyle,
   type MaskPattern,
-  type QaReportOpen,
   type RenderFormat,
   type TestSelectionOptions,
   type QaInstructionsResult,
@@ -31,7 +27,13 @@ import {
 } from '../core/index.js';
 
 import { AttemptTraces } from './attempt-traces.js';
+import { openInBrowser } from './browser.js';
 import { PlaywrightOutputFolder } from './output-folder.js';
+import {
+  isQaReportOpen,
+  QaReportOpenRule,
+  type QaReportOpen,
+} from './report-opening.js';
 import { ReporterLog } from './reporter-log.js';
 import { PlaywrightRunCoverage } from './run-coverage.js';
 import { SharpScreenshotAnnotator } from './sharp-screenshot-annotator.js';
@@ -123,17 +125,16 @@ export default class QaInstructionsReporter implements Reporter {
     ),
     private readonly log = new ReporterLog(),
     private readonly coverage = new PlaywrightRunCoverage(),
-    openerFor: (rule: QaReportOpenRule) => QaReportOpener = (rule) =>
+    openerFor: (open: QaReportOpen) => QaReportOpener = (open) =>
       new QaReportOpener(
-        rule,
-        RunEnvironment.fromProcess(),
-        new QaReportViewer(),
+        new QaReportOpenRule(open),
+        new QaReportViewer(openInBrowser),
       ),
   ) {
     this.folder = new PlaywrightOutputFolder(options.outputFolder);
     this.selection = this.selectionOf(options.select);
     this.formats = this.formatsOf(options.formats);
-    this.opener = openerFor(new QaReportOpenRule(this.openOf(options.open)));
+    this.opener = openerFor(this.openOf(options.open));
   }
 
   printsToStdio(): boolean {

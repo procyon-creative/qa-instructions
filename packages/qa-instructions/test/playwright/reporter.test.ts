@@ -13,17 +13,20 @@ import type {
   TestStep,
 } from '@playwright/test/reporter';
 import {
-  QaReportHint,
   QaReportOpener,
   QaReportViewer,
-  RunEnvironment,
-  type QaReportOpenRule,
   type QaRunBundle,
 } from '../../src/core/index.js';
 
 import QaInstructionsReporter, {
   type QaInstructionsReporterOptions,
 } from '../../src/playwright/index.js';
+import {
+  QaReportHint,
+  QaReportOpenRule,
+  type QaReportOpen,
+} from '../../src/playwright/report-opening.js';
+import { RunEnvironment } from '../../src/playwright/run-environment.js';
 
 type StepSpec = {
   category: string;
@@ -1237,11 +1240,10 @@ type Opening = { opened: string[]; printed: string[] };
 function recordingOpener(
   into: Opening,
   environment = new RunEnvironment({ ci: false, interactive: true }),
-): (rule: QaReportOpenRule) => QaReportOpener {
-  return (rule) =>
+): (open: QaReportOpen) => QaReportOpener {
+  return (open) =>
     new QaReportOpener(
-      rule,
-      environment,
+      new QaReportOpenRule(open, environment),
       new QaReportViewer(async (file) => {
         into.opened.push(file);
       }),
@@ -1252,7 +1254,7 @@ function recordingOpener(
 /** The reporter with every collaborator its default but the report opener. */
 function reporterOpening(
   options: QaInstructionsReporterOptions,
-  opener: (rule: QaReportOpenRule) => QaReportOpener,
+  opener: (open: QaReportOpen) => QaReportOpener,
 ): QaInstructionsReporter {
   return new QaInstructionsReporter(
     options,
@@ -1275,20 +1277,18 @@ async function openingOfRun(
   suite: Suite,
   options: QaInstructionsReporterOptions = {},
   environment?: RunEnvironment,
-): Promise<
-  Opening & { out: string; rule?: QaReportOpenRule; warnings: string[] }
-> {
+): Promise<Opening & { out: string; open?: QaReportOpen; warnings: string[] }> {
   const opening: Opening = { opened: [], printed: [] };
   const warnings: string[] = [];
-  let rule: QaReportOpenRule | undefined;
+  let open: QaReportOpen | undefined;
   const warn = console.warn;
   console.warn = (message: unknown) => warnings.push(String(message));
   const out = await mkdtemp(path.join(tmpdir(), 'qa-reporter-'));
   try {
     const opener = recordingOpener(opening, environment);
-    const reporter = reporterOpening({ ...options, outputFolder: out }, (r) => {
-      rule = r;
-      return opener(r);
+    const reporter = reporterOpening({ ...options, outputFolder: out }, (o) => {
+      open = o;
+      return opener(o);
     });
     reporter.onBegin({ version: '1.63.0' } as never, suite);
     reporter.onTestEnd(mockTestCase(), {
@@ -1299,7 +1299,7 @@ async function openingOfRun(
     } as unknown as TestResult);
     await reporter.onEnd({ status: 'passed' } as FullResult);
     await reporter.onExit();
-    return { ...opening, out, rule, warnings };
+    return { ...opening, out, open, warnings };
   } finally {
     console.warn = warn;
     await rm(out, { recursive: true, force: true });
@@ -1307,15 +1307,15 @@ async function openingOfRun(
 }
 
 test("the open option defaults to Playwright's on-failure", async () => {
-  const { rule } = await openingOfRun(suiteOf('expected'));
-  assert.equal(rule?.open, 'on-failure');
+  const { open } = await openingOfRun(suiteOf('expected'));
+  assert.equal(open, 'on-failure');
 });
 
 test('an unknown open option is ignored, with one warning', async () => {
-  const { rule, warnings } = await openingOfRun(suiteOf('expected'), {
+  const { open, warnings } = await openingOfRun(suiteOf('expected'), {
     open: 'sometimes',
   } as unknown as QaInstructionsReporterOptions);
-  assert.equal(rule?.open, 'on-failure');
+  assert.equal(open, 'on-failure');
   assert.equal(warnings.filter((w) => /"open"/.test(w)).length, 1);
 });
 

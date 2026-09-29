@@ -1,47 +1,32 @@
-import path from 'node:path';
-
-import type { RunEnvironment } from './environment.js';
-import type { QaReportOpenRule } from './open-rule.js';
 import type { QaReportViewer } from './viewer.js';
 
 /**
- * The lines printed at the end of a run telling where the QA Report is and
- * how to open it, like Playwright's "To open last HTML report run" hint.
+ * How the host runner's own report behaves once a run ends (ADR 0003),
+ * supplied by that runner's adapter: whether this run opens the QA Report,
+ * and the lines printed telling how to open it again.
  */
-export class QaReportHint {
-  static readonly COMMAND = 'qa-instructions show-report';
-
-  constructor(private readonly environment: RunEnvironment) {}
-
-  text(folder: string): string {
-    const relative = path.relative(this.environment.cwd, folder) || '.';
-    const shown = /\s/.test(relative) ? JSON.stringify(relative) : relative;
-    return `\nTo open last QA Report run:\n\n  ${this.environment.execCommand} ${QaReportHint.COMMAND} ${shown}\n`;
-  }
+export interface QaReportOpenConventions {
+  /** `passed` is false when the run had a test that did not pass, as the runner counts it. */
+  shouldOpen(passed: boolean): boolean;
+  hint(folder: string): string;
 }
 
 /**
- * What happens once a run has written its QA Report: the hint is printed,
- * and the report opens in a browser when the open rule says so.
+ * What happens once a run has written its QA Report: the runner's hint is
+ * printed, and the report opens in a browser when the runner's conventions
+ * say so.
  */
 export class QaReportOpener {
-  private readonly hint: QaReportHint;
-
   constructor(
-    private readonly rule: QaReportOpenRule,
-    private readonly environment: RunEnvironment,
+    private readonly conventions: QaReportOpenConventions,
     private readonly viewer: QaReportViewer,
     private readonly print: (text: string) => void = (text) =>
       console.log(text),
-  ) {
-    this.hint = new QaReportHint(environment);
-  }
+  ) {}
 
-  /** `ok` is false when any test failed or was flaky. */
-  async afterRun(folder: string, ok: boolean): Promise<void> {
-    this.print(this.hint.text(folder));
-    if (this.rule.shouldOpen(ok, this.environment)) {
-      await this.viewer.show(folder);
-    }
+  /** `passed` is false when the run had a test that did not pass. */
+  async afterRun(folder: string, passed: boolean): Promise<void> {
+    this.print(this.conventions.hint(folder));
+    if (this.conventions.shouldOpen(passed)) await this.viewer.show(folder);
   }
 }

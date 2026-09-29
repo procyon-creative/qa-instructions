@@ -5,101 +5,11 @@ import path from 'node:path';
 import test from 'node:test';
 
 import {
-  QA_REPORT_OPEN_MODES,
   QaReport,
-  QaReportHint,
   QaReportOpener,
-  QaReportOpenRule,
   QaReportViewer,
-  RunEnvironment,
-  isQaReportOpen,
-  type QaReportOpen,
+  type QaReportOpenConventions,
 } from '../../src/core/index.js';
-
-const LOCAL = new RunEnvironment({ ci: false, interactive: true });
-
-test("the open modes and default are Playwright's HTML reporter's", () => {
-  assert.deepEqual(QA_REPORT_OPEN_MODES, ['always', 'never', 'on-failure']);
-  assert.equal(QaReportOpenRule.DEFAULT, 'on-failure');
-  assert.equal(new QaReportOpenRule().open, 'on-failure');
-  assert.ok(isQaReportOpen('never'));
-  assert.ok(!isQaReportOpen('sometimes'));
-  assert.ok(!isQaReportOpen(undefined));
-});
-
-test('opens by mode and outcome when run locally', () => {
-  const cases: [QaReportOpen, boolean, boolean][] = [
-    ['always', true, true],
-    ['always', false, true],
-    ['never', true, false],
-    ['never', false, false],
-    ['on-failure', true, false],
-    ['on-failure', false, true],
-  ];
-  for (const [open, ok, expected] of cases) {
-    assert.equal(
-      new QaReportOpenRule(open).shouldOpen(ok, LOCAL),
-      expected,
-      `${open}, ok=${ok}`,
-    );
-  }
-});
-
-test('never opens in CI or without an interactive terminal, whatever the mode', () => {
-  const ci = new RunEnvironment({ ci: true, interactive: true });
-  const unattended = new RunEnvironment({ ci: false, interactive: false });
-  for (const open of QA_REPORT_OPEN_MODES) {
-    for (const ok of [true, false]) {
-      assert.equal(new QaReportOpenRule(open).shouldOpen(ok, ci), false);
-      assert.equal(
-        new QaReportOpenRule(open).shouldOpen(ok, unattended),
-        false,
-      );
-    }
-  }
-});
-
-test('reads CI, the terminal, and the package manager like Playwright', () => {
-  const tty = { isTTY: true };
-  const local = RunEnvironment.fromProcess({}, tty);
-  assert.equal(local.ci, false);
-  assert.equal(local.interactive, true);
-  assert.equal(local.execCommand, 'npx');
-
-  assert.equal(RunEnvironment.fromProcess({ CI: 'true' }, tty).ci, true);
-  assert.equal(RunEnvironment.fromProcess({ CI: '1' }, tty).ci, true);
-  assert.equal(RunEnvironment.fromProcess({ CI: '' }, tty).ci, false);
-  assert.equal(RunEnvironment.fromProcess({}, {}).interactive, false);
-  assert.equal(
-    RunEnvironment.fromProcess({ CLAUDECODE: '1' }, tty).interactive,
-    false,
-  );
-  assert.equal(
-    RunEnvironment.fromProcess({ COPILOT_CLI: '1' }, tty).interactive,
-    false,
-  );
-  const agent = (ua: string) =>
-    RunEnvironment.fromProcess({ npm_config_user_agent: ua }, tty).execCommand;
-  assert.equal(agent('pnpm/10.0.0 npm/? node/v22'), 'pnpm exec');
-  assert.equal(agent('yarn/4.0.0 npm/? node/v22'), 'yarn');
-  assert.equal(agent('npm/10.0.0 node/v22'), 'npx');
-});
-
-test('the hint names the folder relative to the working directory and the show-report command', () => {
-  const env = new RunEnvironment({
-    ci: true,
-    interactive: false,
-    execCommand: 'pnpm exec',
-    cwd: '/proj',
-  });
-  const hint = new QaReportHint(env);
-  assert.equal(
-    hint.text('/proj/qa-report'),
-    '\nTo open last QA Report run:\n\n  pnpm exec qa-instructions show-report qa-report\n',
-  );
-  assert.match(hint.text('/proj'), /show-report \.\n/);
-  assert.match(hint.text('/proj/my reports'), /show-report "my reports"\n/);
-});
 
 async function withReport(
   run: (folder: string) => Promise<void>,
@@ -115,12 +25,17 @@ async function withReport(
   }
 }
 
+/** A viewer that records what it would open instead of opening a browser. */
+function recordingViewer(opened: string[]): QaReportViewer {
+  return new QaReportViewer(async (target) => {
+    opened.push(target);
+  });
+}
+
 test("the viewer opens the report's index in the browser", async () => {
   await withReport(async (folder) => {
     const opened: string[] = [];
-    const viewer = new QaReportViewer(async (target) => {
-      opened.push(target);
-    });
+    const viewer = recordingViewer(opened);
     assert.equal(await viewer.show(folder), path.join(folder, QaReport.INDEX));
     assert.deepEqual(opened, [path.join(folder, QaReport.INDEX)]);
   });
@@ -128,58 +43,50 @@ test("the viewer opens the report's index in the browser", async () => {
 
 test('the viewer refuses a folder with no QA Report', async () => {
   const opened: string[] = [];
-  const viewer = new QaReportViewer(async (target) => {
-    opened.push(target);
-  });
   await assert.rejects(
-    viewer.show(path.join(tmpdir(), 'no-such-qa-report')),
+    recordingViewer(opened).show(path.join(tmpdir(), 'no-such-qa-report')),
     /No QA Report found at/,
   );
   assert.deepEqual(opened, []);
 });
 
-async function finish(
-  folder: string,
-  open: QaReportOpen,
-  ok: boolean,
-  env: RunEnvironment,
-): Promise<{ opened: string[]; printed: string[] }> {
-  const opened: string[] = [];
-  const printed: string[] = [];
-  const opener = new QaReportOpener(
-    new QaReportOpenRule(open),
-    env,
-    new QaReportViewer(async (target) => {
-      opened.push(target);
-    }),
-    (text) => printed.push(text),
-  );
-  await opener.afterRun(folder, ok);
-  return { opened, printed };
+/** Conventions that open when the run failed, recording what they were asked. */
+class FakeConventions implements QaReportOpenConventions {
+  readonly asked: boolean[] = [];
+
+  shouldOpen(passed: boolean): boolean {
+    this.asked.push(passed);
+    return !passed;
+  }
+
+  hint(folder: string): string {
+    return `open ${folder}`;
+  }
 }
 
-test('after a run, prints the hint and opens the report when the rule says so', async () => {
+async function finish(
+  folder: string,
+  passed: boolean,
+): Promise<{ opened: string[]; printed: string[]; asked: boolean[] }> {
+  const opened: string[] = [];
+  const printed: string[] = [];
+  const conventions = new FakeConventions();
+  await new QaReportOpener(conventions, recordingViewer(opened), (text) =>
+    printed.push(text),
+  ).afterRun(folder, passed);
+  return { opened, printed, asked: conventions.asked };
+}
+
+test("after a run, prints the runner's hint and opens the report when its conventions say so", async () => {
   await withReport(async (folder) => {
-    const env = new RunEnvironment({
-      ci: false,
-      interactive: true,
-      cwd: path.dirname(folder),
-    });
-    const failed = await finish(folder, 'on-failure', false, env);
+    const failed = await finish(folder, false);
+    assert.deepEqual(failed.asked, [false]);
     assert.deepEqual(failed.opened, [path.join(folder, QaReport.INDEX)]);
-    assert.deepEqual(failed.printed, [new QaReportHint(env).text(folder)]);
+    assert.deepEqual(failed.printed, [`open ${folder}`]);
 
-    const passed = await finish(folder, 'on-failure', true, env);
+    const passed = await finish(folder, true);
+    assert.deepEqual(passed.asked, [true]);
     assert.deepEqual(passed.opened, []);
-    assert.equal(passed.printed.length, 1);
-  });
-});
-
-test('after a CI run, opens nothing and still prints the hint', async () => {
-  await withReport(async (folder) => {
-    const env = new RunEnvironment({ ci: true, interactive: true });
-    const { opened, printed } = await finish(folder, 'always', false, env);
-    assert.deepEqual(opened, []);
-    assert.match(printed.join(''), /qa-instructions show-report/);
+    assert.deepEqual(passed.printed, [`open ${folder}`]);
   });
 });

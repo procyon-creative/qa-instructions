@@ -7,13 +7,15 @@ import { fileURLToPath } from 'node:url';
 import { RenderCommand } from '../../src/cli/render.js';
 import {
   DEFAULT_HIGHLIGHT,
-  QA_REPORT_OPEN_MODES,
   QaReport,
-  QaReportHint,
-  QaReportOpenRule,
   RENDER_FORMATS,
 } from '../../src/core/index.js';
 import { PlaywrightOutputFolder } from '../../src/playwright/output-folder.js';
+import {
+  QA_REPORT_OPEN_MODES,
+  QaReportHint,
+  QaReportOpenRule,
+} from '../../src/playwright/report-opening.js';
 
 // Tests run from dist-test/test/package/, three levels below the package root.
 const packageRoot = path.resolve(
