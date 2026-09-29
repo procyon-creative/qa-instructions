@@ -147,6 +147,54 @@ test('stale tests are removed before the index is written, and folders the repor
   });
 });
 
+test('render regenerates every test page, Jira text, and asked-for format from the saved data', async () => {
+  await withFolder(async (folder) => {
+    await writeBoth(new QaReport(folder));
+    const welcome = path.join(folder, 'sign-in--check-welcome');
+    await writeFile(path.join(welcome, 'qa-steps.txt'), 'stale');
+    await rm(path.join(welcome, 'qa-steps.html'));
+
+    const rendered = await new QaReport(folder, {
+      formats: ['markdown'],
+    }).render();
+
+    assert.deepEqual(rendered, [
+      path.join(folder, 'home--open-the-home-page'),
+      welcome,
+    ]);
+    assert.equal(
+      await readFile(path.join(welcome, 'qa-steps.txt'), 'utf8'),
+      renderQaSteps(RENDER_BUNDLE),
+    );
+    assert.equal(
+      await readFile(path.join(welcome, 'qa-steps.html'), 'utf8'),
+      renderHtml(RENDER_BUNDLE, {
+        images: new EmbeddedImages(RENDER_BUNDLE_IMAGES),
+      }),
+    );
+    assert.ok(
+      (await readdir(path.join(folder, 'home--open-the-home-page'))).includes(
+        'qa-steps.md',
+      ),
+    );
+  });
+});
+
+test('render skips a test whose saved data cannot be read, as the index does', async () => {
+  await withFolder(async (folder) => {
+    const report = new QaReport(folder);
+    await writeBoth(report);
+    await writeFile(
+      path.join(folder, 'home--open-the-home-page', 'bundle.json'),
+      '{',
+    );
+
+    assert.deepEqual(await report.render(), [
+      path.join(folder, 'sign-in--check-welcome'),
+    ]);
+  });
+});
+
 test('an empty run still writes the index', async () => {
   await withFolder(async (folder) => {
     const html = await readFile(

@@ -59,7 +59,7 @@ export interface RenderLayout {
 /**
  * One file per bundle in a separate directory, named after the bundle
  * (`<out>/<bundle>.md`), with Markdown's screenshots copied to
- * `<out>/<bundle>/`. The `qa-instructions render` layout.
+ * `<out>/<bundle>/`. The `renderAll` layout.
  */
 export class OutputDirLayout implements RenderLayout {
   constructor(private readonly outDir: string) {}

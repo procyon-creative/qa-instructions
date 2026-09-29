@@ -54,6 +54,31 @@ export class QaReport {
     owner: BundleOwner,
   ): Promise<void> {
     const dir = await this.output.write(name, bundle, assets, owner);
+    await this.renderTest(dir);
+  }
+
+  /**
+   * Renders every test in the folder again from its saved data, each format
+   * as `writeTest` does, and returns their directories in directory order,
+   * so a report can be regenerated without rerunning its tests. A directory
+   * whose saved data cannot be read is skipped, as the index leaves it out.
+   */
+  async render(): Promise<string[]> {
+    const rendered: string[] = [];
+    for (const { name } of await this.output.owned()) {
+      const dir = path.join(this.folder, name);
+      try {
+        await readBundle(dir);
+      } catch {
+        continue;
+      }
+      await this.renderTest(dir);
+      rendered.push(dir);
+    }
+    return rendered;
+  }
+
+  private async renderTest(dir: string): Promise<void> {
     for (const renderer of this.renderers) await renderer.render(dir);
   }
 

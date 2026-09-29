@@ -2,7 +2,7 @@
 
 ## Goal
 
-Turn what an existing Playwright test already does into QA Instructions a person can follow by hand, without changing the test. The developer installs one package and adds one reporter to their Playwright config; every test run then leaves a QA Report: an index of every test, each test's page with its screenshots, and its Jira-ready text. A separate command re-renders saved bundles.
+Turn what an existing Playwright test already does into QA Instructions a person can follow by hand, without changing the test. The developer installs one package and adds one reporter to their Playwright config; every test run then leaves a QA Report: an index of every test, each test's page with its screenshots, and its Jira-ready text. A separate command regenerates the QA Report from its saved bundles.
 
 The decisions and their alternatives are recorded in [ADR 0001](./adr/0001-reporter-derived-qa-steps.md), [ADR 0002](./adr/0002-one-package-with-entry-points.md) (one package with entry points), and [ADR 0003](./adr/0003-report-follows-host-runner-conventions.md) (the QA Report behaves like the host runner's own HTML report). Vocabulary (QA Instructions, QA Step, Action, Expected Result, Section, Step Screenshot, QA Report, Result Screenshot, Highlight) is defined in [CONTEXT.md](../CONTEXT.md).
 
@@ -76,11 +76,11 @@ The default export is `QaInstructionsReporter`, a Playwright `Reporter`:
 
 ### CLI: `src/cli/`, the `qa-instructions` command
 
-Re-renders saved bundles, one format into a separate directory, without re-running tests:
+Regenerates a QA Report from the saved bundles in it, without re-running tests: the same index, pages, and Jira-ready text a run writes, through the core's `QaReport`, plus any `--format` asked for:
 
 ```bash
-# Render all bundles collected during the run
-qa-instructions render qa-report/ --format qa-steps --out qa-steps-out/
+# Regenerate the QA Report a run left in qa-report/, adding Markdown
+qa-instructions render qa-report/ --format markdown
 ```
 
 Also usable programmatically:

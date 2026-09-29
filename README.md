@@ -55,7 +55,7 @@ qa-report/
     bundle.json, assets/          the saved data the report is made from
 ```
 
-Open `qa-report/index.html` to browse every test's QA Instructions; paste a test's `qa-steps.txt` into your ticket's QA Steps. The pages load nothing from the network, so the folder works offline, from disk, or as a CI artifact. To re-render saved data without re-running tests, use [`qa-instructions render`](#render).
+Open `qa-report/index.html` to browse every test's QA Instructions; paste a test's `qa-steps.txt` into your ticket's QA Steps. The pages load nothing from the network, so the folder works offline, from disk, or as a CI artifact. To regenerate the report from its saved data without re-running tests, use [`qa-instructions render`](#render).
 
 `@playwright/test` is an optional peer dependency used for types only, so the package always runs against your project's own Playwright and never loads a second copy.
 
@@ -103,14 +103,14 @@ An unrecognized command-line argument also counts as a partial run. A bundle who
 
 More formats to write into each test's directory of the QA Report, beside its page and Jira-ready text, which every test always gets. The default adds none.
 
-| Format     | File            | Step Screenshots                                         | Written     |
-| ---------- | --------------- | -------------------------------------------------------- | ----------- |
-| `qa-steps` | `qa-steps.txt`  | None                                                     | Always      |
-| `html`     | `qa-steps.html` | Embedded as data URIs; the one file works on its own     | Always      |
-| `markdown` | `qa-steps.md`   | Inline, linked to the test's own `assets/`               | When listed |
-| `json`     | `qa-steps.json` | Not included (the saved data, as `render --format json`) | When listed |
+| Format     | File            | Step Screenshots                                     | Written     |
+| ---------- | --------------- | ---------------------------------------------------- | ----------- |
+| `qa-steps` | `qa-steps.txt`  | None                                                 | Always      |
+| `html`     | `qa-steps.html` | Embedded as data URIs; the one file works on its own | Always      |
+| `markdown` | `qa-steps.md`   | Inline, linked to the test's own `assets/`           | When listed |
+| `json`     | `qa-steps.json` | Not included (the saved data itself)                 | When listed |
 
-Each file matches [`qa-instructions render`](#render) exactly; only where it goes differs. An unknown format is ignored, with one warning.
+Every format shows the same QA Steps, Expected Results, Sections, warnings, and status. The HTML page has inline styles for light and dark color schemes, no scripts or fonts, and a Content Security Policy that blocks all network requests. Screenshots are embedded rather than copied alongside because they are small (tens of KB per step), and one file is easier to share. An unknown format is ignored, with one warning.
 
 ```typescript
 {
@@ -228,24 +228,13 @@ When the test found the element inside another one (`form.locator(…)` on `page
 
 ## Render
 
-Every test run writes its QA Report; nothing needs rendering by hand. The `qa-instructions` command, from the same package, re-renders saved data without re-running tests, to one format into a separate directory:
+Every test run writes its QA Report; nothing needs rendering by hand. The `qa-instructions` command, from the same package, regenerates a QA Report from the saved data in it without re-running tests, for example after upgrading this package:
 
 ```bash
-npx qa-instructions render <folder> --format <format> --out <dir>
+npx qa-instructions render <folder> [--format qa-steps|markdown|html|json]...
 ```
 
-`<folder>` is the QA Report's `outputFolder` (every test directory directly inside it is rendered) or one test's directory. `--format` defaults to `qa-steps` and `--out` to `qa-steps-out`. For example, `qa-instructions render qa-report --format markdown --out qa-steps-out`.
-
-Every format shows the same QA Steps, Expected Results, Sections, warnings, and status:
-
-| `--format` | Output                              | Step Screenshots                                                                                                 |
-| ---------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `qa-steps` | `<test>.txt`, Jira-ready plain text | None                                                                                                             |
-| `markdown` | `<test>.md`, PR-ready Markdown      | Inline under each step, linked relatively; copied to `<out>/<test>/` so the links work from the output directory |
-| `html`     | `<test>.html`, a standalone page    | Embedded as data URIs, so the one file works offline, from disk, or as a CI artifact                             |
-| `json`     | `<test>.json`, the bundle itself    | Not included                                                                                                     |
-
-The HTML page has inline styles for light and dark color schemes, no scripts or fonts, and a Content Security Policy that blocks all network requests. Screenshots are embedded rather than copied alongside because they are small (tens of KB per step), and one file is easier to share.
+`<folder>` is the QA Report's `outputFolder`, relative to the working directory. Every test directory in it that holds saved data gets its page and Jira-ready text again, plus each `--format` given, which takes the values of the [`formats`](#formats) option and can be repeated; then `index.html` is rewritten. The result is laid out exactly as a run writes it. For example, `qa-instructions render qa-report --format markdown` adds `qa-steps.md` to every test.
 
 ## Architecture
 
@@ -255,7 +244,7 @@ Playwright reporter (adapter)  →  core (test events → QA Instructions)  → 
 
 - The core is runner-independent: it accepts a neutral stream of test events and knows nothing about Playwright or Jest.
 - The Playwright reporter is a thin adapter that translates reporter steps into those events and hands each test's result to the core's `QaReport`, which writes the saved data, each test's page and Jira-ready text, and the index.
-- Renderers are pure: bundle in, output out. One shared view model walks the bundle once, and the text, Markdown, and HTML renderers each format that view, so they cannot drift apart. The QA Report and the CLI share one `BundleRenderer` that supplies screenshot bytes or links; adding an output format touches only a renderer.
+- Renderers are pure: bundle in, output out. One shared view model walks the bundle once, and the text, Markdown, and HTML renderers each format that view, so they cannot drift apart. The reporter and the `render` command both write through `QaReport`, whose `BundleRenderer` supplies screenshot bytes or links; adding an output format touches only a renderer.
 
 See [docs/design.md](./docs/design.md), [ADR 0001](./docs/adr/0001-reporter-derived-qa-steps.md), [ADR 0002](./docs/adr/0002-one-package-with-entry-points.md), and [ADR 0003](./docs/adr/0003-report-follows-host-runner-conventions.md). Vocabulary is in [CONTEXT.md](./CONTEXT.md).
 

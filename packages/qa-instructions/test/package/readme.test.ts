@@ -4,6 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { RenderCommand } from '../../src/cli/render.js';
 import {
   DEFAULT_HIGHLIGHT,
   QaReport,
@@ -71,13 +72,11 @@ test('README states the default highlight', async () => {
   assert.ok(section.includes(`[${quoted}]`));
 });
 
-test('README lists every render format', async () => {
+test('README documents the render command with every format', async () => {
   const section = await readmeSection('Render');
+  assert.ok(section.includes(`npx ${RenderCommand.USAGE}`));
   for (const format of RENDER_FORMATS) {
-    assert.ok(
-      section.includes(`| \`${format}\``),
-      `README "Render" omits ${format}`,
-    );
+    assert.ok(section.includes(format), `README "Render" omits ${format}`);
   }
 });
 
