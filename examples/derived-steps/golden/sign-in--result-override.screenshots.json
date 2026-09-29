@@ -1,5 +1,5 @@
 {
-  "bundleDirs": ["sign-in--sign-in-with-bad-credentials"],
+  "bundleDirs": ["result-override/sign-in--sign-in-with-bad-credentials"],
   "viewport": { "width": 800, "height": 600 },
   "minBytes": 2000,
   "resultsListed": true,
@@ -21,22 +21,19 @@
       "action": "Click the **Sign in** link",
       "moment": "action",
       "probes": [
-        { "name": "home marker", "x": 400, "y": 140, "rgb": [0, 85, 255] },
-        { "name": "outline", "at": "outline", "rgb": [255, 0, 128] },
-        { "name": "click dot", "at": "clickPoint", "rgb": [255, 0, 128] }
-      ]
+        { "name": "home marker", "x": 400, "y": 140, "rgb": [0, 85, 255] }
+      ],
+      "result": {
+        "probes": [
+          { "name": "login marker", "x": 400, "y": 140, "rgb": [255, 136, 0] }
+        ]
+      }
     },
     {
       "action": "Type **demo-user** into **Username**",
       "moment": "action",
       "probes": [
-        { "name": "login marker", "x": 400, "y": 140, "rgb": [255, 136, 0] },
-        {
-          "name": "empty Username field",
-          "at": "elementBoxCenter",
-          "rgb": [255, 255, 255]
-        },
-        { "name": "outline", "at": "outline", "rgb": [255, 0, 128] }
+        { "name": "login marker", "x": 400, "y": 140, "rgb": [255, 136, 0] }
       ]
     },
     {

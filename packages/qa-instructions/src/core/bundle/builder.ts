@@ -38,6 +38,7 @@ export function createBundleBuilder(): BundleBuilder {
         expected: input.expected,
         url: input.url,
         assetIds: input.assetIds,
+        resultAssetId: input.resultAssetId,
         section: input.section,
         failed: input.failed || undefined,
         checkFailed: input.checkFailed || undefined,

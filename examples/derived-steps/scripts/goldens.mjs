@@ -91,7 +91,11 @@ export const GOLDENS = [
 ];
 
 /** QA Report folders whose index links must all lead to files. */
-export const REPORT_FOLDERS = [REPORT, `${REPORT}/failing`];
+export const REPORT_FOLDERS = [
+  REPORT,
+  `${REPORT}/failing`,
+  `${REPORT}/result-override`,
+];
 
 const DATA_URI = /data:image\/png;base64,[A-Za-z0-9+/=]+/g;
 
@@ -124,9 +128,13 @@ export const OUTPUT_DIRS = [REPORT];
  * Hand-written expectations for each bundle's Step Screenshots: one per QA
  * Step, taken at the expected moment, with the Highlight marks it should
  * carry and pixel probes on known elements and on the Highlight itself.
+ * Where a golden sets `resultsListed`, only the steps given a `result` have
+ * a Result Screenshot, unhighlighted, with its own probes.
  */
 export const SCREENSHOT_GOLDENS = [
   'golden/sign-in--sign-in-with-bad-credentials.screenshots.json',
+  // resultScreenshots overrides: a middle step gets one too.
+  'golden/sign-in--result-override.screenshots.json',
   'golden/scripted-page--subscribe-to-the-newsletter.screenshots.json',
   'golden/moving-ui--register-a-warranty-from-the-menu.screenshots.json',
   'golden/moving-ui--highlight-styles.screenshots.json',

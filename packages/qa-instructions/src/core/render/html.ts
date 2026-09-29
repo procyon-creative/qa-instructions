@@ -1,7 +1,12 @@
 import { HtmlPage } from './html-page.js';
 import type { StepImages } from './images.js';
 import { InlineMarkup } from './inline-markup.js';
-import { QaWording, type QaInstructionsView, type QaStepView } from './view.js';
+import {
+  QaWording,
+  type QaInstructionsView,
+  type QaStepView,
+  type StepScreenshotView,
+} from './view.js';
 
 /** The QA Instructions title is `<h1>`; Sections start one level below it. */
 const SECTION_LEVEL = 2;
@@ -9,7 +14,8 @@ const MAX_LEVEL = 6;
 
 /**
  * A standalone HTML page (see `HtmlPage`): nested Sections as nested
- * `<section>`s, and each Step Screenshot with alt text from its Action.
+ * `<section>`s, and each Step Screenshot with alt text from its Action,
+ * followed by the step's Result Screenshot, if any, captioned.
  */
 export class HtmlRenderer {
   constructor(
@@ -79,13 +85,24 @@ export class HtmlRenderer {
       classes.length > 0 ? `<li class="${classes.join(' ')}">` : '<li>',
       ...paragraphs.map((paragraph) => `${paragraph}</p>`),
     ];
-    const src = step.screenshot && this.images?.src(step.screenshot.asset);
-    if (step.screenshot && src) {
-      lines.push(
-        `<figure><img src="${src}" alt="${InlineMarkup.escapeHtml(step.screenshot.alt)}"></figure>`,
-      );
-    }
-    lines.push('</li>');
+    lines.push(
+      ...this.figure(step.screenshot),
+      ...this.figure(step.resultScreenshot, QaWording.result),
+      '</li>',
+    );
     return lines;
+  }
+
+  /** The screenshot as a figure, or nothing when its image is unavailable. */
+  private figure(
+    screenshot: StepScreenshotView | undefined,
+    caption?: string,
+  ): string[] {
+    const src = screenshot && this.images?.src(screenshot.asset);
+    if (!screenshot || !src) return [];
+    const figcaption = caption ? `<figcaption>${caption}</figcaption>` : '';
+    return [
+      `<figure>${figcaption}<img src="${src}" alt="${InlineMarkup.escapeHtml(screenshot.alt)}"></figure>`,
+    ];
   }
 }

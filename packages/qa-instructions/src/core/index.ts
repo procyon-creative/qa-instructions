@@ -16,7 +16,20 @@ export {
   type Screenshot,
   type ScreenshotSource,
 } from './screenshots/source.js';
-export { StepScreenshotPicker } from './screenshots/picker.js';
+export {
+  ResultScreenshotPicker,
+  StepScreenshotPicker,
+} from './screenshots/picker.js';
+export {
+  RESULT_SCREENSHOT_STEPS,
+  STEP_SCREENSHOTS,
+  ResultScreenshotRule,
+  type ResultScreenshotOptions,
+  type ResultScreenshotStep,
+  type ResultScreenshotSteps,
+  type StepScreenshotOverride,
+  type StepScreenshots,
+} from './screenshots/result-rule.js';
 export type {
   BadgeMark,
   ClickDotMark,

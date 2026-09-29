@@ -1,5 +1,5 @@
 /**
- * Outbound port: where Step Screenshots come from.
+ * Outbound port: where Step Screenshots and Result Screenshots come from.
  *
  * An adapter (the Playwright trace reader today) looks up what was captured
  * for an Action by the Action's `ref`. Nothing here may depend on a test
@@ -77,6 +77,12 @@ export type SectionChanges = {
 export type ActionCapture = {
   /** The page around the Action, at each moment that was captured. */
   screenshots: Screenshot[];
+  /**
+   * The page once the Action was done, when the source is sure it shows
+   * the Action's effect: a Result Screenshot for a step with no check that
+   * has one. Undefined when no such picture was captured.
+   */
+  result?: Screenshot;
   /** The element the Action touched, in viewport CSS pixels. */
   box?: QaBox;
   /** Where the Action clicked or tapped, in viewport CSS pixels. */
@@ -120,6 +126,11 @@ export type CheckCapture = {
   expectedPattern?: ExpectedPattern;
   /** The element the check looked at, as the page was recorded. */
   element?: RecordedElement;
+  /**
+   * The page just after the check was done, so as it checked it: what a
+   * Result Screenshot shows. Undefined when no such picture was captured.
+   */
+  result?: Screenshot;
 };
 
 export interface ScreenshotSource {

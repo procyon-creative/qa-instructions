@@ -106,6 +106,49 @@ test('html: embeds screenshots as data URIs with alt text from the action', () =
   );
 });
 
+test('html: shows a Result Screenshot after its Step Screenshot, captioned, with alt text from the Expected Result', () => {
+  const output = renderHtml(RENDER_BUNDLE, {
+    images: new EmbeddedImages(RENDER_BUNDLE_IMAGES),
+  });
+  const step = output.slice(output.indexOf('<li class="failed">'));
+  assert.match(
+    step,
+    /<figure><img src="data:image\/png;base64,Zml2ZQ==" alt="Step 5: [^"]*"><\/figure>\n<figure><figcaption>Result<\/figcaption><img src="data:image\/png;base64,Zml2ZS1yZXN1bHQ=" alt="Step 5 result: Welcome is visible"><\/figure>\n<\/li>/,
+  );
+});
+
+test('html: a Result Screenshot alone is shown without a Step Screenshot', () => {
+  const output = renderHtml(
+    {
+      ...RENDER_BUNDLE,
+      steps: [
+        {
+          index: 1,
+          action: 'Click **Submit**',
+          resultAssetId: 'step-05-result',
+        },
+      ],
+    },
+    { images: new EmbeddedImages(RENDER_BUNDLE_IMAGES) },
+  );
+  assert.equal(output.match(/<img /g)?.length, 1);
+  assert.match(output, /alt="Step 1 result: Click Submit"/);
+});
+
+test('markdown: shows a Result Screenshot after its Step Screenshot', () => {
+  const output = renderMarkdown(RENDER_BUNDLE, {
+    images: new RelativeImageLinks('out', RENDER_BUNDLE_IMAGES.keys()),
+  });
+  assert.match(
+    output,
+    /!\[Step 5: [^\]]*\]\(out\/step-05\.png\)\n\n {3}!\[Step 5 result: Welcome is visible\]\(out\/step-05-result\.png\)\n$/,
+  );
+});
+
+test('text: Jira text shows no screenshots', () => {
+  assert.doesNotMatch(renderQaSteps(RENDER_BUNDLE), /result/i);
+});
+
 test('html: is self-contained, with no external scripts, styles, or fonts', () => {
   const output = renderHtml(RENDER_BUNDLE, {
     images: new EmbeddedImages(RENDER_BUNDLE_IMAGES),

@@ -40,6 +40,19 @@ export default defineConfig({
       '@procyon-creative/qa-instructions/playwright',
       { outputFolder: 'qa-report/ignore', testSteps: 'ignore', mask, open },
     ],
+    // A Result Screenshot on a middle step too, chosen by its text; the last
+    // step keeps its own by default.
+    [
+      '@procyon-creative/qa-instructions/playwright',
+      {
+        outputFolder: 'qa-report/result-override',
+        open,
+        select: { files: ['sign-in.spec.ts'] },
+        resultScreenshots: {
+          overrides: [{ match: 'Click the Sign in link', screenshots: 'both' }],
+        },
+      },
+    ],
     ...highlightStyles.map(
       (highlight) =>
         [

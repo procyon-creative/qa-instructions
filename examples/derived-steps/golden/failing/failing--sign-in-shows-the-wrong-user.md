@@ -19,3 +19,5 @@
    **Expected:** The page shows **Logged in as admin** (**test failed here**)
 
    ![Step 4: Click the Submit good credentials link](assets/step-04.png)
+
+   ![Step 4 result: The page shows Logged in as admin](assets/step-04-result.png)

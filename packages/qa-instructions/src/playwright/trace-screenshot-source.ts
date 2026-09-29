@@ -6,6 +6,7 @@ import type {
   QaScreenshotMoment,
   QaSize,
   RecordedElement,
+  Screenshot,
   ScreenshotSource,
   SectionChanges,
 } from '../core/index.js';
@@ -598,25 +599,40 @@ export class TraceScreenshotSource implements ScreenshotSource {
       ({ ref, stepId }) => {
         const record = calls.forStep(stepId);
         return record
-          ? [{ ref, record, images: this.images(record, calls, frames) }]
+          ? [
+              {
+                ref,
+                record,
+                images: this.images(record, calls, frames),
+                result: this.resultImage(record),
+              },
+            ]
           : [];
       },
     );
-
-    const wanted = new Set(
-      records.flatMap(({ images }) => images.map((image) => image.file)),
+    const checkResults = new Map(
+      TraceChecks.stepIds(testEvents).flatMap((stepId) => {
+        const record = calls.forStep(stepId);
+        const result = record && this.resultImage(record);
+        return result ? [[stepId, result] as const] : [];
+      }),
     );
+
+    const wanted = new Set([
+      ...records.flatMap(({ images, result }) =>
+        [...images, result].flatMap((image) => (image ? [image.file] : [])),
+      ),
+      ...[...checkResults.values()].map(({ file }) => file),
+    ]);
     const files = archive.files((name) => wanted.has(name));
+    const screenshot = (image: ImageRef | undefined) =>
+      image && this.screenshot(image, files);
 
     const captures = new Map<string, ActionCapture>();
-    for (const { ref, record, images } of records) {
+    for (const { ref, record, images, result } of records) {
       captures.set(ref, {
-        screenshots: images.flatMap(({ moment, file }) => {
-          const data = files.get(file);
-          return data
-            ? [{ moment, contentType: this.contentType(file), data }]
-            : [];
-        }),
+        screenshots: images.flatMap((image) => screenshot(image) ?? []),
+        result: screenshot(result),
         box: record.box,
         point: record.point,
         passwordField: record.passwordField,
@@ -629,7 +645,13 @@ export class TraceScreenshotSource implements ScreenshotSource {
     }
     const checks = new TraceChecks(testEvents, (stepId) => {
       const record = calls.forStep(stepId);
-      return record?.expect && { ...record.expect, element: record.element };
+      return (
+        record?.expect && {
+          ...record.expect,
+          element: record.element,
+          result: screenshot(checkResults.get(stepId)),
+        }
+      );
     });
     return new TraceScreenshotSource(captures, checks);
   }
@@ -663,6 +685,27 @@ export class TraceScreenshotSource implements ScreenshotSource {
     if (action) return [{ moment: 'action', file: action.file }];
     const after = frames.afterAction(call);
     return after ? [{ moment: 'after', file: after.file }] : [];
+  }
+
+  /**
+   * The picture of the page a Result Screenshot may show for a call (an
+   * Action, or a check the browser ran): the call's own screenshot from once
+   * it was done (`snapshots.screen`, Playwright 1.63+). Playwright takes it
+   * after the call returned, so for a check it shows the page the check has
+   * just passed on. Without per-action screenshots (before 1.63), none yet:
+   * the screen recording's frames are not yet known to be trustworthy for
+   * this (QI-49 adds them here).
+   */
+  private static resultImage(record: CallRecord): ImageRef | undefined {
+    return record.screenshots.find(({ moment }) => moment === 'after');
+  }
+
+  private static screenshot(
+    { moment, file }: ImageRef,
+    files: ReadonlyMap<string, Buffer>,
+  ): Screenshot | undefined {
+    const data = files.get(file);
+    return data && { moment, contentType: this.contentType(file), data };
   }
 
   private static contentType(file: string): string {

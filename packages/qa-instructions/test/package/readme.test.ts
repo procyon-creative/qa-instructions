@@ -9,6 +9,9 @@ import {
   DEFAULT_HIGHLIGHT,
   QaReport,
   RENDER_FORMATS,
+  RESULT_SCREENSHOT_STEPS,
+  ResultScreenshotRule,
+  STEP_SCREENSHOTS,
 } from '../../src/core/index.js';
 import { PlaywrightOutputFolder } from '../../src/playwright/output-folder.js';
 import {
@@ -124,6 +127,26 @@ test('README states the open option values and default', async () => {
       `\\| \`open\` +\\| \`${values}\` +\\| \`'${QaReportOpenRule.DEFAULT}'\``,
     ),
   );
+});
+
+test('README states the resultScreenshots values, default, and override choices', async () => {
+  const section = await readmeSection('Reporter options');
+  const values = RESULT_SCREENSHOT_STEPS.map((steps) => `'${steps}'`).join(
+    ' \\\\\\| ',
+  );
+  assert.match(
+    section,
+    new RegExp(
+      `\\| \`resultScreenshots\` +\\| \`${values}\` or \`\\{ steps, overrides \\}\` +\\| \`'${ResultScreenshotRule.DEFAULT}'\``,
+    ),
+  );
+  const option = section.slice(section.indexOf('### `resultScreenshots`'));
+  for (const choice of STEP_SCREENSHOTS) {
+    assert.ok(
+      option.includes(`| \`'${choice}'\``),
+      `README "resultScreenshots" omits ${choice}`,
+    );
+  }
 });
 
 test('README documents the show-report command', async () => {

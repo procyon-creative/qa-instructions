@@ -78,15 +78,16 @@ Without the trace setting, QA Steps are text only, and the reporter prints one w
 
 The second element of the reporter entry in `playwright.config.ts`.
 
-| Option         | Type                                                                              | Default                     |
-| -------------- | --------------------------------------------------------------------------------- | --------------------------- |
-| `outputFolder` | `string`                                                                          | `'qa-report'`               |
-| `open`         | `'always' \| 'never' \| 'on-failure'`                                             | `'on-failure'`              |
-| `formats`      | `('qa-steps' \| 'markdown' \| 'html' \| 'json')[]`                                | none beyond the QA Report   |
-| `select`       | `{ tags?: string[]; files?: string[] }`                                           | every test                  |
-| `testSteps`    | `'sections' \| 'collapse' \| 'ignore'`                                            | `'sections'`                |
-| `highlight`    | `'outline' \| 'clickDot' \| 'badge' \| 'spotlight'`, a list of these, or `'none'` | `['outline', 'clickDot']`   |
-| `mask`         | `(string \| RegExp)[]`                                                            | none (password fields only) |
+| Option              | Type                                                                              | Default                     |
+| ------------------- | --------------------------------------------------------------------------------- | --------------------------- |
+| `outputFolder`      | `string`                                                                          | `'qa-report'`               |
+| `open`              | `'always' \| 'never' \| 'on-failure'`                                             | `'on-failure'`              |
+| `formats`           | `('qa-steps' \| 'markdown' \| 'html' \| 'json')[]`                                | none beyond the QA Report   |
+| `select`            | `{ tags?: string[]; files?: string[] }`                                           | every test                  |
+| `testSteps`         | `'sections' \| 'collapse' \| 'ignore'`                                            | `'sections'`                |
+| `highlight`         | `'outline' \| 'clickDot' \| 'badge' \| 'spotlight'`, a list of these, or `'none'` | `['outline', 'clickDot']`   |
+| `resultScreenshots` | `'last' \| 'every' \| 'none'` or `{ steps, overrides }`                           | `'last'`                    |
+| `mask`              | `(string \| RegExp)[]`                                                            | none (password fields only) |
 
 ### `outputFolder`
 
@@ -190,6 +191,39 @@ The Highlight each Step Screenshot carries on the element its Action touched. Gi
 - Warning steps, and screenshots taken after the Action (the page may have moved on), get no Highlight. On Playwright 1.53–1.62 only a click can get one, its click dot (see [Playwright versions](#playwright-versions)).
 - A screenshot that cannot be drawn on is kept unmarked, with a warning.
 
+### `resultScreenshots`
+
+Which QA Steps also show a Result Screenshot: the page after the Action, showing what the step's Expected Result describes (for the sign-in sample, the **Login failed** page after **Submit**). It follows the step's Step Screenshot on the test's page and in Markdown. By default only the last QA Step has one, since the next step's Step Screenshot already shows the result of every other step.
+
+- `'last'` (default): the last QA Step only.
+- `'every'`: every QA Step.
+- `'none'`: no QA Step.
+
+To decide for single steps, give `{ steps, overrides }`. Each override matches a step by its text as the tester reads it, without the bold markers (`Click the Submit bad credentials button`): a string anywhere in it, case-sensitively, or a regular expression. The first override that matches decides what the step shows, whatever `steps` says:
+
+| `screenshots` | The step shows                                                       |
+| ------------- | -------------------------------------------------------------------- |
+| `'action'`    | Its Step Screenshot only                                             |
+| `'result'`    | Its Result Screenshot only (its Step Screenshot if it has no result) |
+| `'both'`      | Its Step Screenshot, then its Result Screenshot                      |
+
+```typescript
+{
+  resultScreenshots: {
+    steps: 'last',
+    overrides: [
+      { match: 'Click the Sign in link', screenshots: 'both' },
+      { match: /^Type /, screenshots: 'action' },
+    ],
+  },
+}
+```
+
+- The picture is Playwright's own screenshot from just after the step's last check the browser ran (`toBeVisible`, `toHaveText`, and other checks on the page), so it shows the page as the Expected Result was confirmed. A step with no such check gets the screenshot taken once its Action was done (for a collapsed group, its last Action).
+- A Result Screenshot has no Highlight: the page may have moved on from the element the Action touched. It is masked like a Step Screenshot (see [`mask`](#mask)), and saved beside it as `assets/step-NN-result.png`.
+- A Result Screenshot identical to the step's Step Screenshot (a navigation with no check) is not shown twice.
+- Playwright 1.63+ only for now; on 1.53–1.62 no step gets one. An unusable value is ignored, with one warning, for the default.
+
 ### `mask`
 
 More Secrets to mask: exact strings, or regular expressions (every match is masked; no `g` flag needed). Each is replaced with `[masked]` in QA Step text, Expected Results, URLs, Section titles, the test title, and test directory names.
@@ -219,7 +253,7 @@ Requires `@playwright/test` 1.53 or later.
 | 1.63+      | Step data (`subtitle`, `params`)                           | One full-size screenshot per Action, element box and click point | `use: { trace: { mode: 'on', snapshots: { screen: true, dom: true } } }` |
 | 1.53–1.62  | Step titles, each check's line in your test, and the trace | A frame of the screen recording per Action; click point          | `use: { trace: 'on' }`                                                   |
 
-On 1.53–1.62 the QA Steps and Expected Results read the same as on 1.63; screenshots are rougher (recorded JPEG frames, and no element box, so no outline). The recording only gets a frame when the page repaints, and a frame can show the page from just before a change, so a click gets its click point marked only on a frame that is sure to show the page as the click met it: the last frame drawn before the click, if it was drawn at least 50ms after the page reached its scroll position and is no more than 50ms old, or drawn at least 50ms after the page last changed at all. A click that Playwright first scrolled to therefore stays unmarked. Every other Action, and a click without such a frame, gets a frame from after it ended and before the next Action changed the page (the last one drawn then), unmarked. The recording skips frames while the page moves, so when the next Action saw the page still moving after a fill (a smooth scroll to its field), the fill gets only a frame drawn at least 50ms after that Action found the page still, and otherwise none, rather than one of the scroll still under way. A fill with no frame drawn in that time gets no screenshot rather than one from before it scrolled and typed, and a check of a box that was already checked (Playwright neither scrolls to it nor clicks it) gets none on any version. A check on an element held in a variable (`expect(qtyInput).toHaveValue(String(QTY))`) names the element and the value the trace recorded, as on 1.63. Without a trace, checks are read from your test's source alone: an element held in a variable has no name unless the check has a message, and an expected value is read only when written as a literal or a constant (`toBe(QTY)`, not `toBe(QTY * PRICE)`). One limit remains: a navigation to an absolute URL held in a variable keeps only its path. Traces in formats other than 8, 9, and 10 give text-only QA Instructions and a warning.
+On 1.53–1.62 the QA Steps and Expected Results read the same as on 1.63; screenshots are rougher (recorded JPEG frames, and no element box, so no outline). The recording only gets a frame when the page repaints, and a frame can show the page from just before a change, so a click gets its click point marked only on a frame that is sure to show the page as the click met it: the last frame drawn before the click, if it was drawn at least 50ms after the page reached its scroll position and is no more than 50ms old, or drawn at least 50ms after the page last changed at all. A click that Playwright first scrolled to therefore stays unmarked. Every other Action, and a click without such a frame, gets a frame from after it ended and before the next Action changed the page (the last one drawn then), unmarked. The recording skips frames while the page moves, so when the next Action saw the page still moving after a fill (a smooth scroll to its field), the fill gets only a frame drawn at least 50ms after that Action found the page still, and otherwise none, rather than one of the scroll still under way. A fill with no frame drawn in that time gets no screenshot rather than one from before it scrolled and typed. No step gets a Result Screenshot yet (see [`resultScreenshots`](#resultscreenshots)). A check of a box that was already checked (Playwright neither scrolls to it nor clicks it) gets no Step Screenshot on any version. A check on an element held in a variable (`expect(qtyInput).toHaveValue(String(QTY))`) names the element and the value the trace recorded, as on 1.63. Without a trace, checks are read from your test's source alone: an element held in a variable has no name unless the check has a message, and an expected value is read only when written as a literal or a constant (`toBe(QTY)`, not `toBe(QTY * PRICE)`). One limit remains: a navigation to an absolute URL held in a variable keeps only its path. Traces in formats other than 8, 9, and 10 give text-only QA Instructions and a warning.
 
 ## What you get
 

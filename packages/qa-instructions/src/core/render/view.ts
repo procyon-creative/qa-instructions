@@ -11,9 +11,13 @@ export const QaWording = {
     'approximate: the test forced this Action past its usual checks, so its highlight may not line up',
   failed: 'test failed here',
   checkFailed: 'check failed here',
+  result: 'Result',
 } as const;
 
-/** A QA Step's Step Screenshot, with alt text taken from its Action. */
+/**
+ * A QA Step's Step Screenshot, with alt text taken from its Action, or its
+ * Result Screenshot, with alt text taken from its Expected Result.
+ */
 export type StepScreenshotView = { asset: QaAsset; alt: string };
 
 /** One QA Step as every format shows it. Text fields use inline markup. */
@@ -26,6 +30,8 @@ export type QaStepView = {
   /** What failed on this step, worded: the test, or else a soft check. */
   failure?: string;
   screenshot?: StepScreenshotView;
+  /** Shown after the Step Screenshot: the page once the Action was done. */
+  resultScreenshot?: StepScreenshotView;
 };
 
 /** Consecutive QA Steps in the same Section. */
@@ -104,8 +110,8 @@ export class QaInstructionsView {
   }
 
   private static stepView(bundle: QaRunBundle, step: QaStep): QaStepView {
-    const assetId = step.assetIds?.[0];
-    const asset = assetId ? bundle.assets[assetId] : undefined;
+    const asset = QaInstructionsView.asset(bundle, step.assetIds?.[0]);
+    const result = QaInstructionsView.asset(bundle, step.resultAssetId);
     return {
       number: step.index,
       action: step.action,
@@ -123,7 +129,20 @@ export class QaInstructionsView {
             alt: `Step ${step.index}: ${InlineMarkup.toPlain(step.action)}`,
           }
         : undefined,
+      resultScreenshot: result
+        ? {
+            asset: result,
+            alt: `Step ${step.index} result: ${InlineMarkup.toPlain(step.expected ?? step.action)}`,
+          }
+        : undefined,
     };
+  }
+
+  private static asset(
+    bundle: QaRunBundle,
+    id: string | undefined,
+  ): QaAsset | undefined {
+    return id === undefined ? undefined : bundle.assets[id];
   }
 
   private static sameSection(a: readonly string[], b: readonly string[]) {

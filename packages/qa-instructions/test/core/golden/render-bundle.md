@@ -33,3 +33,5 @@ Deploy the branch to dev first.
    **Expected:** **Welcome** is visible (**test failed here**)
 
    ![Step 5: Click Submit &lt;b>now&lt;/b>](sign-in/step-05.png)
+
+   ![Step 5 result: Welcome is visible](sign-in/step-05-result.png)

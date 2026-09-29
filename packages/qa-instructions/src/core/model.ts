@@ -30,7 +30,13 @@ export type QaStep = {
   action: string;
   expected?: string;
   url?: string;
+  /** The step's Step Screenshot, when it has one. */
   assetIds?: string[];
+  /**
+   * The step's Result Screenshot: the page after its Action, showing what
+   * its Expected Result describes. Never highlighted.
+   */
+  resultAssetId?: string;
   /** Titles of the Section this step is in, outermost group first. */
   section?: string[];
   /** True on the QA Step where the test failed. */

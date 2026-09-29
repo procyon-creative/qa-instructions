@@ -10,7 +10,7 @@ import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { PNG } from 'pngjs';
 import sharp from 'sharp';
 
-import { ActionRef } from '../../src/playwright/action-ref.js';
+import { ActionRef, CheckRef } from '../../src/playwright/action-ref.js';
 import { TraceScreenshotSource } from '../../src/playwright/trace-screenshot-source.js';
 
 /** Sample traces recorded from test/fixtures/traces/scenario.spec.ts. */
@@ -117,6 +117,39 @@ for (const [version, path] of Object.entries(TRACES)) {
     assert.equal(source.capture(ActionRef.of(6, 'Hover')), undefined);
     assert.equal(source.capture(ActionRef.of(99, 'Click')), undefined);
     assert.equal(source.capture('not a ref'), undefined);
+  });
+}
+
+// The scenario's first check, on the Paint button while the page is green.
+const VISIBLE = CheckRef.of(1, 'Expect "toBeVisible"');
+const TO_BE = CheckRef.of(2, 'Expect "toBe"');
+
+for (const [version, path] of Object.entries(TRACES)) {
+  test(`trace format ${version}: an Action's result is its own screenshot from once it was done`, async () => {
+    const source = await TraceScreenshotSource.open(path);
+
+    const click = source.capture(CLICK);
+    assert.equal(click?.result?.moment, 'after');
+    assert.ok(click?.result?.data.equals(shot(click, 'after').data));
+    // The click turned the page red.
+    assert.deepEqual(pixel(click.result, 10, 10), RED);
+    for (const ref of [NAVIGATE, FILL, PRESS]) {
+      const capture = source.capture(ref);
+      assert.ok(capture?.result?.data.equals(shot(capture, 'after').data));
+    }
+  });
+
+  test(`trace format ${version}: a check the browser ran has a result, its page just after the check`, async () => {
+    const source = await TraceScreenshotSource.open(path);
+
+    const visible = source.check(VISIBLE)?.result;
+    assert.equal(visible?.moment, 'after');
+    assert.equal(visible?.contentType, 'image/png');
+    assert.ok(visible);
+    // Checked before the click: still green.
+    assert.deepEqual(pixel(visible, 10, 10), GREEN);
+    // A check on a value the test read ran no browser call: nothing pictured.
+    assert.equal(source.check(TO_BE)?.result, undefined);
   });
 }
 
@@ -665,4 +698,19 @@ test('a later trace without per-action screenshots falls back to the screen reco
   assert.deepEqual(moments(click), ['after']);
   assert.ok(click?.screenshots[0].data.equals(Buffer.from(frame)));
   assert.deepEqual(click?.box, { x: 40, y: 40, width: 120, height: 40 });
+  // No recorded frame is yet trusted to show a result (QI-49).
+  assert.equal(click?.result, undefined);
+  assert.equal(source.check(VISIBLE)?.result, undefined);
+});
+
+test('trace format 8: no screen recording frame is yet trusted as a result, for an Action or a check', async () => {
+  for (const name of ['v8.zip', 'v8-scroll.zip', 'v8-smooth.zip']) {
+    const source = await TraceScreenshotSource.open(fixture(name));
+    for (const ref of Object.values(V8)) {
+      assert.equal(source.capture(ref)?.result, undefined, `${name} ${ref}`);
+    }
+  }
+  const source = await TraceScreenshotSource.open(fixture('v8.zip'));
+  assert.ok(source.check(VISIBLE), 'the check is in the trace');
+  assert.equal(source.check(VISIBLE)?.result, undefined);
 });
