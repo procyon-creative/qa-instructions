@@ -64,12 +64,13 @@ async function bundleFrom(
   ) as { title: string; steps: DumpedStep[] };
   const dump = { ...recorded, steps: recorded.steps.map(rewrite) };
 
-  const out = await mkdtemp(path.join(tmpdir(), 'qa-versions-'));
+  const outputDir = await mkdtemp(path.join(tmpdir(), 'qa-versions-'));
+  const out = path.join(outputDir, 'qa-report');
   const warn = console.warn;
   console.warn = () => {};
   try {
-    const reporter = new QaInstructionsReporter({ outputFolder: out });
-    reporter.onBegin({ version } as never);
+    const reporter = new QaInstructionsReporter();
+    reporter.onBegin({ version, projects: [{ outputDir }] } as never);
     reporter.onTestEnd(
       {
         id: recording,
@@ -99,7 +100,7 @@ async function bundleFrom(
     ) as QaRunBundle;
   } finally {
     console.warn = warn;
-    await rm(out, { recursive: true, force: true });
+    await rm(outputDir, { recursive: true, force: true });
   }
 }
 

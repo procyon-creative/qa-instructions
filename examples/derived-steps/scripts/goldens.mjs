@@ -8,15 +8,24 @@ export const root = path.join(
   '..',
 );
 
-/** The QA Report the main run writes, in the reporter's default folder. */
-export const REPORT = 'qa-report';
+/**
+ * The QA Report a run writes: `qa-report/` inside the run's Playwright
+ * `outputDir`, `test-results[/<run>]/`. `run` is empty for the main run,
+ * which keeps Playwright's default `outputDir`.
+ */
+export function reportOf(run = '') {
+  return path.posix.join('test-results', run, 'qa-report');
+}
+
+/** The QA Report the main run writes. */
+export const REPORT = reportOf();
 
 /**
- * A file the run wrote into a test's directory of a QA Report:
- * `qa-report[/<folder>]/<test>/qa-steps.<ext>`. No render step runs.
+ * A file a run wrote into a test's directory of its QA Report:
+ * `test-results[/<run>]/qa-report/<test>/qa-steps.<ext>`. No render step runs.
  */
-function reported(test, ext, folder = '') {
-  return path.posix.join(REPORT, folder, test, `qa-steps.${ext}`);
+function reported(test, ext, run = '') {
+  return path.posix.join(reportOf(run), test, `qa-steps.${ext}`);
 }
 
 /** Jira-ready text in the main QA Report, and the golden it must equal. */
@@ -70,7 +79,7 @@ export const GOLDENS = [
     ['md', 'html'].map((ext) => ({
       rendered: reported(name, ext, folder),
       golden: `golden/${path.posix.join(folder, name)}.${ext}`,
-      bundleDir: path.posix.join(REPORT, folder, name),
+      bundleDir: path.posix.join(reportOf(folder), name),
     })),
   ),
   text('moving-ui--register-a-warranty-from-the-menu'),
@@ -85,7 +94,7 @@ export const GOLDENS = [
   // Each QA Report's index: every test, its status, and its links.
   { rendered: `${REPORT}/index.html`, golden: 'golden/index.html' },
   {
-    rendered: `${REPORT}/failing/index.html`,
+    rendered: `${reportOf('failing')}/index.html`,
     golden: 'golden/failing/index.html',
   },
 ];
@@ -93,8 +102,8 @@ export const GOLDENS = [
 /** QA Report folders whose index links must all lead to files. */
 export const REPORT_FOLDERS = [
   REPORT,
-  `${REPORT}/failing`,
-  `${REPORT}/result-override`,
+  reportOf('failing'),
+  reportOf('result-override'),
 ];
 
 const DATA_URI = /data:image\/png;base64,[A-Za-z0-9+/=]+/g;

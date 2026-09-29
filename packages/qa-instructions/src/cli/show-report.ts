@@ -4,8 +4,10 @@ import { PlaywrightOutputFolder } from '../playwright/output-folder.js';
 
 /**
  * `qa-instructions show-report [folder]`, like `playwright show-report`:
- * opens the last QA Report, or the one in `folder`, found from the working
- * directory the way the reporter places it.
+ * opens the last QA Report, or the one in `folder`. With no `folder` it looks
+ * in Playwright's default `outputDir` (`test-results/qa-report/` beside the
+ * package.json nearest the working directory); it never loads Playwright to
+ * read a configured one.
  */
 export class ShowReportCommand {
   constructor(
@@ -17,7 +19,7 @@ export class ShowReportCommand {
 
   async run(folder?: string): Promise<void> {
     const index = await this.viewer.show(
-      new PlaywrightOutputFolder(folder).resolveFrom(this.cwd),
+      new PlaywrightOutputFolder(this.cwd).forShowReport(folder),
     );
     this.print(`Opened the QA Report at ${index}`);
   }

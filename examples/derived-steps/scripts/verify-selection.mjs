@@ -2,14 +2,16 @@ import assert from 'node:assert/strict';
 import { readdir } from 'node:fs/promises';
 import path from 'node:path';
 
-import { root } from './goldens.mjs';
+import { reportOf, root } from './goldens.mjs';
 
 // playwright.selection.config.ts selects tests tagged `@qa`: only the tagged
 // test's bundle may exist, although every test in selection.spec.ts ran.
 const expected = ['selection--open-the-home-page'];
 
 const actual = (
-  await readdir(path.join(root, 'qa-report-selection'), { withFileTypes: true })
+  await readdir(path.join(root, reportOf('selection')), {
+    withFileTypes: true,
+  })
 )
   .filter((entry) => entry.isDirectory())
   .map((entry) => entry.name)

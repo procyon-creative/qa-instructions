@@ -41,7 +41,7 @@ async function run(
   status: FullResult['status'] = 'passed',
 ): Promise<string[]> {
   const reporter = new QaInstructionsReporter(
-    { outputFolder: out },
+    {},
     undefined,
     undefined,
     undefined,
@@ -50,7 +50,10 @@ async function run(
     undefined,
     new PlaywrightRunCoverage(argv),
   );
-  reporter.onBegin(config as unknown as FullConfig);
+  reporter.onBegin({
+    ...config,
+    projects: [{ name: 'chromium', outputDir: path.dirname(out) }],
+  } as unknown as FullConfig);
   reporter.onTestEnd(testCase(title), {
     status: 'passed',
     retry: 0,
@@ -61,12 +64,13 @@ async function run(
   return (await readdir(out)).sort();
 }
 
+/** Runs `body` with the QA Report folder inside a temporary Playwright `outputDir`. */
 async function withOutput(body: (out: string) => Promise<void>) {
-  const out = await mkdtemp(path.join(tmpdir(), 'qa-stale-'));
+  const outputDir = await mkdtemp(path.join(tmpdir(), 'qa-stale-'));
   try {
-    await body(out);
+    await body(path.join(outputDir, 'qa-report'));
   } finally {
-    await rm(out, { recursive: true, force: true });
+    await rm(outputDir, { recursive: true, force: true });
   }
 }
 

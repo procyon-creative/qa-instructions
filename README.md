@@ -21,7 +21,6 @@ export default defineConfig({
     [
       '@procyon-creative/qa-instructions/playwright',
       {
-        outputFolder: 'qa-report',
         open: 'on-failure',
         formats: ['markdown'],
         testSteps: 'sections',
@@ -45,10 +44,10 @@ export default defineConfig({
 
 Every option is optional; `['@procyon-creative/qa-instructions/playwright']` alone works. See [Reporter options](#reporter-options).
 
-Run your tests as usual (`npx playwright test`). Every run leaves a QA Report in `qa-report/`, with no second command:
+Run your tests as usual (`npx playwright test`). Every run leaves a QA Report in `test-results/qa-report/`, inside Playwright's own tests output folder, with no second command (see [Where the QA Report goes](#where-the-qa-report-goes)):
 
 ```
-qa-report/
+test-results/qa-report/
   index.html                      every test, its status, and links
   <file>--<test title>/
     qa-steps.html                 the test's page, screenshots embedded
@@ -61,7 +60,7 @@ At the end of the run the reporter prints how to open it, as Playwright does for
 ```
 To open last QA Report run:
 
-  npx qa-instructions show-report qa-report
+  npx qa-instructions show-report test-results/qa-report
 ```
 
 Browse every test's QA Instructions from its `index.html`; paste a test's `qa-steps.txt` into your ticket's QA Steps. The pages load nothing from the network, so the folder works offline, from disk, or as a CI artifact. To regenerate the report from its saved data without re-running tests, use [`qa-instructions render`](#render).
@@ -80,7 +79,6 @@ The second element of the reporter entry in `playwright.config.ts`.
 
 | Option              | Type                                                                              | Default                     |
 | ------------------- | --------------------------------------------------------------------------------- | --------------------------- |
-| `outputFolder`      | `string`                                                                          | `'qa-report'`               |
 | `open`              | `'always' \| 'never' \| 'on-failure'`                                             | `'on-failure'`              |
 | `formats`           | `('qa-steps' \| 'markdown' \| 'html' \| 'json')[]`                                | none beyond the QA Report   |
 | `select`            | `{ tags?: string[]; files?: string[] }`                                           | every test                  |
@@ -89,15 +87,17 @@ The second element of the reporter entry in `playwright.config.ts`.
 | `resultScreenshots` | `'last' \| 'every' \| 'none'` or `{ steps, overrides }`                           | `'last'`                    |
 | `mask`              | `(string \| RegExp)[]`                                                            | none (password fields only) |
 
-### `outputFolder`
+### Where the QA Report goes
 
-The folder the QA Report is written to, named and resolved like the `outputFolder` of Playwright's HTML reporter: relative to the config file, and by default `qa-report/` beside the project's `package.json` (where Playwright puts `playwright-report/`). It replaces the `outputDir` option and `qa-runs/` default of earlier versions.
+The QA Report has no folder option of its own: it goes in `<outputDir>/qa-report/`, inside Playwright's tests output folder, [`outputDir`](https://playwright.dev/docs/api/class-testconfig#test-config-output-dir). By default that is `test-results/qa-report/` beside the project's `package.json`; set `outputDir` in the Playwright config (or pass `--output`) to move it. Playwright resolves `outputDir` per project; when your projects set different ones, the first project in the run, in config order, decides. The `outputFolder` option of earlier versions is removed; setting it prints one warning and is ignored.
 
-The folder holds `index.html`, listing every test in it with its status (Complete, or Incomplete for a test that did not pass) and links to its page and Jira-ready text, and one directory per test, `<outputFolder>/<file>--<test title>/` (with the project, then the line, added only when two tests would otherwise share a directory). A retried test keeps its last attempt.
+It is not in `playwright-report/`, because Playwright's HTML reporter deletes that folder whenever it writes. Playwright clears `outputDir` when a run starts, before the QA Report is written, so a `playwright test` run's QA Report holds exactly the tests that run produced; keep it between runs by saving it as a CI artifact or copying it elsewhere.
 
-Every test directory the reporter writes holds a `.qa-instructions.json` marker. After a full run, the reporter removes the marked directories that run did not write, such as those of renamed or deleted tests, so the QA Report holds only that run's tests. It never removes anything without the marker, and nothing outside `outputFolder`.
+The folder holds `index.html`, listing every test in it with its status (Complete, or Incomplete for a test that did not pass) and links to its page and Jira-ready text, and one directory per test, `<outputDir>/qa-report/<file>--<test title>/` (with the project, then the line, added only when two tests would otherwise share a directory). A retried test keeps its last attempt.
 
-A partial run removes nothing, so results for tests it didn't run are kept. A run counts as full only when it:
+Every test directory the reporter writes holds a `.qa-instructions.json` marker. When Playwright keeps `outputDir` between runs (as its UI mode does), the reporter removes, after a full run, the marked directories that run did not write, such as those of renamed or deleted tests, so the QA Report holds only that run's tests. It never removes anything without the marker, and nothing outside `qa-report/`.
+
+A partial run removes nothing, so results kept from earlier runs for tests it didn't run stay. A run counts as full only when it:
 
 - was started as `playwright test` with no test filters: no file or `file:line` arguments, and no `--grep`, `--grep-invert`, `--project`, `--last-failed`, `--only-changed`, `--shard`, `--list`, or `--ui`;
 - finished rather than being interrupted or timing out, and, with `maxFailures` set, passed.
@@ -105,9 +105,8 @@ A partial run removes nothing, so results for tests it didn't run are kept. A ru
 An unrecognized command-line argument also counts as a partial run. A bundle whose test the `select` option now leaves out is kept. `test.only` narrows a run in a way reporters can't see, so a full run with `test.only` removes the other tests' bundles.
 
 ```typescript
-{
-  outputFolder: 'artifacts/qa-report';
-}
+// playwright.config.ts: the QA Report goes in artifacts/qa-report/
+export default defineConfig({ outputDir: 'artifacts' /* ... */ });
 ```
 
 ### `open`
@@ -289,7 +288,7 @@ Opens the last QA Report in your browser, like `npx playwright show-report`:
 npx qa-instructions show-report [folder]
 ```
 
-Without `[folder]` it opens `qa-report/` beside the `package.json` nearest the working directory, where the reporter writes it by default; a `[folder]` is relative to the working directory. The report is static and works offline, so its `index.html` is opened directly from disk rather than served.
+Without `[folder]` it opens `test-results/qa-report/` beside the `package.json` nearest the working directory, where the reporter writes it with Playwright's default `outputDir`; with another `outputDir`, pass its `qa-report/` folder, as the command printed at the end of the run does. A `[folder]` is relative to the working directory. The report is static and works offline, so its `index.html` is opened directly from disk rather than served.
 
 ## Render
 
@@ -299,7 +298,7 @@ Every test run writes its QA Report; nothing needs rendering by hand. The `qa-in
 npx qa-instructions render <folder> [--format qa-steps|markdown|html|json]...
 ```
 
-`<folder>` is the QA Report's `outputFolder`, relative to the working directory. Every test directory in it that holds saved data gets its page and Jira-ready text again, plus each `--format` given, which takes the values of the [`formats`](#formats) option and can be repeated; then `index.html` is rewritten. The result is laid out exactly as a run writes it. For example, `qa-instructions render qa-report --format markdown` adds `qa-steps.md` to every test.
+`<folder>` is the QA Report's folder (`<outputDir>/qa-report/`), relative to the working directory. Every test directory in it that holds saved data gets its page and Jira-ready text again, plus each `--format` given, which takes the values of the [`formats`](#formats) option and can be repeated; then `index.html` is rewritten. The result is laid out exactly as a run writes it. For example, `qa-instructions render test-results/qa-report --format markdown` adds `qa-steps.md` to every test.
 
 ## Architecture
 
@@ -353,5 +352,5 @@ All examples are unmodified Playwright tests with the reporter added to their co
 pnpm verify
 
 # External smoke only
-cd examples/basic && pnpm test   # then open qa-report/index.html
+cd examples/basic && pnpm test   # then open test-results/qa-report/index.html
 ```

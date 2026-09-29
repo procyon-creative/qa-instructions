@@ -14,10 +14,7 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   reporter: [
     ['list'],
-    [
-      '@procyon-creative/qa-instructions/playwright',
-      { outputFolder: 'qa-report' },
-    ],
+    ['@procyon-creative/qa-instructions/playwright', { open: 'on-failure' }],
   ],
 });
 ```
@@ -30,7 +27,7 @@ Post-test CI step:
 - uses: actions/upload-artifact@v4
   with:
     name: qa-report
-    path: qa-report/
+    path: test-results/qa-report/
 ```
 
 ## Pipeline
@@ -70,8 +67,8 @@ The recorder makes one QA Step per user Action (opening a URL, clicking, typing,
 The default export is `QaInstructionsReporter`, a Playwright `Reporter`:
 
 - On `onTestEnd`, `PlaywrightStepTranslator` walks the test's `pw:api` and `expect` steps and emits core test events.
-- The core recorder builds the bundle; on `onEnd` the reporter hands each one to the core's `QaReport`, which writes it to `<outputFolder>/<file>--<test title>/` and renders the test's page (`qa-steps.html`), its Jira-ready text (`qa-steps.txt`), and any extra `formats` (`qa-steps.md`, `qa-steps.json`) beside it with the core's `BundleRenderer`, then writes `<outputFolder>/index.html`.
-- `outputFolder` is resolved as Playwright resolves its HTML reporter's: relative to the config file, default `qa-report/` beside the nearest `package.json`.
+- The core recorder builds the bundle; on `onEnd` the reporter hands each one to the core's `QaReport`, which writes it to `<outputDir>/qa-report/<file>--<test title>/` and renders the test's page (`qa-steps.html`), its Jira-ready text (`qa-steps.txt`), and any extra `formats` (`qa-steps.md`, `qa-steps.json`) beside it with the core's `BundleRenderer`, then writes `<outputDir>/qa-report/index.html`.
+- `outputDir` is Playwright's tests output folder (default `test-results/` beside the nearest `package.json`), which Playwright clears when the run starts, before `onEnd`. Playwright resolves it per project and reporters see no run-wide one, so `PlaywrightOutputFolder` takes the first project in the run, in config order (they normally share the config's `outputDir`), else the first configured project. The choice stays in the adapter; the core's `QaReport` just takes a folder (ADR 0003).
 - It never throws into the test run; a failure to write is logged as a warning.
 
 ### CLI: `src/cli/`, the `qa-instructions` command
@@ -79,8 +76,8 @@ The default export is `QaInstructionsReporter`, a Playwright `Reporter`:
 Regenerates a QA Report from the saved bundles in it, without re-running tests: the same index, pages, and Jira-ready text a run writes, through the core's `QaReport`, plus any `--format` asked for:
 
 ```bash
-# Regenerate the QA Report a run left in qa-report/, adding Markdown
-qa-instructions render qa-report/ --format markdown
+# Regenerate the QA Report a run left in test-results/qa-report/, adding Markdown
+qa-instructions render test-results/qa-report/ --format markdown
 ```
 
 Also usable programmatically:
@@ -88,7 +85,7 @@ Also usable programmatically:
 ```typescript
 import { readBundle, renderQaSteps } from '@procyon-creative/qa-instructions';
 
-const bundle = await readBundle('qa-report/login--sign-in');
+const bundle = await readBundle('test-results/qa-report/login--sign-in');
 const text = renderQaSteps(bundle);
 ```
 
@@ -134,7 +131,7 @@ interface QaAsset {
 On disk, a bundle is a directory of the QA Report:
 
 ```
-qa-report/
+test-results/qa-report/
   index.html            # every test, its status, and links
   sign-in--sign-in-with-bad-credentials/
     bundle.json

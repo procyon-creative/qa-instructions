@@ -106,14 +106,18 @@ test('README lists every format the formats option takes, and what every test ge
   }
 });
 
-test('README states the QA Report output folder default', async () => {
+test("README states the QA Report goes inside Playwright's outputDir, with no option of its own", async () => {
   const section = await readmeSection('Reporter options');
-  assert.match(
-    section,
-    new RegExp(
-      `\\| \`outputFolder\` +\\| \`string\` +\\| \`'${PlaywrightOutputFolder.DEFAULT}'\``,
-    ),
-  );
+  const { NAME, DEFAULT_OUTPUT_DIR } = PlaywrightOutputFolder;
+  assert.ok(section.includes(`\`<outputDir>/${NAME}/\``));
+  assert.ok(section.includes(`\`${DEFAULT_OUTPUT_DIR}/${NAME}/\``));
+  assert.doesNotMatch(section, /\| `outputFolder`|### `outputFolder`/);
+});
+
+test('README shows show-report opening the default QA Report', async () => {
+  const section = await readmeSection('Show report');
+  const { NAME, DEFAULT_OUTPUT_DIR } = PlaywrightOutputFolder;
+  assert.ok(section.includes(`\`${DEFAULT_OUTPUT_DIR}/${NAME}/\``));
 });
 
 test('README states the open option values and default', async () => {

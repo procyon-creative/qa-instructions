@@ -42,13 +42,12 @@ import { SharpScreenshotAnnotator } from './sharp-screenshot-annotator.js';
 import { PlaywrightStepTranslator } from './step-translator.js';
 import { TraceAdvice } from './trace-advice.js';
 
+/**
+ * Options of the QA Report reporter. The QA Report always goes in
+ * `qa-report/` inside Playwright's `outputDir` (default `test-results/`);
+ * set `outputDir` in the Playwright config to move it.
+ */
 export type QaInstructionsReporterOptions = {
-  /**
-   * The folder the QA Report is written to, named and resolved like
-   * Playwright's HTML reporter option: relative to the config file.
-   * Default `qa-report`, beside the project's package.json.
-   */
-  outputFolder?: string;
   /**
    * Limit which tests produce QA Instructions, by tag and by test file glob.
    * Default: every test. Unselected tests still run and produce nothing.
@@ -109,7 +108,7 @@ export type QaInstructionsReporterOptions = {
  * trace setting Step Screenshots need).
  */
 export default class QaInstructionsReporter implements Reporter {
-  private readonly folder: PlaywrightOutputFolder;
+  private readonly folder = new PlaywrightOutputFolder();
   private readonly selection: TestSelection;
   private readonly formats: RenderFormat[];
   private readonly resultScreenshots: ResultScreenshotRule;
@@ -149,7 +148,7 @@ export default class QaInstructionsReporter implements Reporter {
         new QaReportViewer(openInBrowser),
       ),
   ) {
-    this.folder = new PlaywrightOutputFolder(options.outputFolder);
+    this.warnOnOutputFolder(options);
     this.selection = this.selectionOf(options.select);
     this.formats = this.formatsOf(options.formats);
     this.resultScreenshots = this.resultScreenshotsOf(
@@ -202,7 +201,7 @@ export default class QaInstructionsReporter implements Reporter {
     try {
       this.result = result;
       results = this.run.results();
-      report = new QaReport(this.folder.resolve(this.config?.configFile), {
+      report = new QaReport(this.folder.forRun(this.config, this.suite), {
         formats: this.formats,
         stalePolicy: new StaleBundlePolicy(this.selection),
       });
@@ -278,6 +277,15 @@ export default class QaInstructionsReporter implements Reporter {
   private warnHighlight(step: string, error: unknown): void {
     console.warn(
       `qa-instructions: could not highlight the screenshot for "${step}"; kept it unmarked: ${String(error)}`,
+    );
+  }
+
+  /** The removed `outputFolder` option is ignored, with a warning naming Playwright's `outputDir`, which now places the QA Report. */
+  private warnOnOutputFolder(options: QaInstructionsReporterOptions): void {
+    if (!('outputFolder' in options)) return;
+    this.log.once(
+      'outputFolder',
+      `ignoring the removed "outputFolder" option; the QA Report goes in ${PlaywrightOutputFolder.NAME}/ inside Playwright's outputDir (set outputDir in the Playwright config to move it).`,
     );
   }
 

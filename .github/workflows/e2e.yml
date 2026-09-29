@@ -51,10 +51,11 @@ jobs:
         if: always()
         with:
           name: qa-report
+          # Each run's QA Report, in qa-report/ inside its Playwright outputDir.
           path: |
-            examples/verification/qa-report/
-            examples/derived-steps/qa-report/
-            examples/derived-steps-1.56/qa-report/
+            examples/verification/test-results/qa-report/
+            examples/derived-steps/test-results/**/qa-report/
+            examples/derived-steps-1.56/test-results/**/qa-report/
 
       - uses: actions/upload-artifact@v7
         if: failure()

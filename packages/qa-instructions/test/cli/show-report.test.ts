@@ -9,15 +9,16 @@ import { QaReport, QaReportViewer } from '../../src/core/index.js';
 
 /**
  * A project with a package.json, a `src/` subdirectory, and a QA Report in
- * each of `qa-report/` and `custom/`.
+ * each of `test-results/qa-report/` (in Playwright's default `outputDir`)
+ * and `custom/`.
  */
 async function withProject(run: (root: string) => Promise<void>) {
   const root = await mkdtemp(path.join(tmpdir(), 'qa-show-report-'));
   try {
     await writeFile(path.join(root, 'package.json'), '{}');
     await mkdir(path.join(root, 'src'));
-    for (const folder of ['qa-report', 'custom']) {
-      await mkdir(path.join(root, folder));
+    for (const folder of [path.join('test-results', 'qa-report'), 'custom']) {
+      await mkdir(path.join(root, folder), { recursive: true });
       await writeFile(path.join(root, folder, QaReport.INDEX), '<html>');
     }
     await run(root);
@@ -39,11 +40,11 @@ function command(cwd: string) {
   return { show, opened, printed };
 }
 
-test('show-report opens the last QA Report, found beside the nearest package.json', async () => {
+test("show-report opens the last QA Report, in Playwright's default outputDir beside the nearest package.json", async () => {
   await withProject(async (root) => {
     const { show, opened, printed } = command(path.join(root, 'src'));
     await show.run();
-    const index = path.join(root, 'qa-report', QaReport.INDEX);
+    const index = path.join(root, 'test-results', 'qa-report', QaReport.INDEX);
     assert.deepEqual(opened, [index]);
     assert.deepEqual(printed, [`Opened the QA Report at ${index}`]);
   });

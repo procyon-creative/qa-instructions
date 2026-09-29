@@ -4,6 +4,7 @@ import base from './playwright.config';
 
 // Tests in ./failing-tests fail on purpose. This run is expected to exit
 // non-zero; scripts/run-failing.mjs asserts that and keeps `pnpm e2e` green.
+// Its own outputDir puts its QA Report in test-results/failing/qa-report/.
 export default defineConfig({
   ...base,
   testDir: './failing-tests',
@@ -13,9 +14,6 @@ export default defineConfig({
   use: { ...base.use, actionTimeout: 1_000 },
   reporter: [
     ['list'],
-    [
-      '@procyon-creative/qa-instructions/playwright',
-      { outputFolder: 'qa-report/failing', formats: ['markdown'] },
-    ],
+    ['@procyon-creative/qa-instructions/playwright', { formats: ['markdown'] }],
   ],
 });
