@@ -61,6 +61,34 @@ function fail(message) {
   failed = true;
 }
 
+let results = 0;
+
+/**
+ * Before 1.63 a Result Screenshot is a screen recording frame, given only
+ * when the trace shows the frame pictures the page as the step left it, so
+ * a step may have none. One it has must be a frame, unhighlighted.
+ */
+async function verifyResult(label, dir, bundle, step) {
+  if (!step.resultAssetId) return;
+  const asset = bundle.assets[step.resultAssetId];
+  if (asset?.highlight) {
+    fail(`${label}: Result Screenshot is highlighted (${asset.highlight})`);
+  }
+  try {
+    const data = await readFile(path.join(dir, 'assets', asset.filename));
+    if (!data.subarray(0, 3).equals(JPEG) || data.length < 1000) {
+      fail(
+        `${label}: result ${asset.filename} is not a screen recording frame`,
+      );
+    }
+    results += 1;
+  } catch (error) {
+    fail(
+      `${label}: missing Result Screenshot ${asset?.filename}: ${error.message}`,
+    );
+  }
+}
+
 for (const name of GOLDENS) {
   const golden = await readFile(
     path.join(derivedSteps, 'golden', `${name}.txt`),
@@ -94,15 +122,19 @@ for (const name of GOLDENS) {
   const bundle = JSON.parse(
     await readFile(path.join(dir, 'bundle.json'), 'utf8'),
   );
-  // The test's page shows every Step Screenshot, embedded.
+  // The test's page shows every Step and Result Screenshot, embedded.
   const page = await readFile(path.join(dir, 'qa-steps.html'), 'utf8');
   const shown = page.match(/src="data:image\/\w+;base64,/g)?.length ?? 0;
-  const screenshots = bundle.steps.filter((s) => s.assetIds?.length).length;
+  const screenshots = bundle.steps.flatMap((s) => [
+    ...(s.assetIds?.length ? [s.assetIds[0]] : []),
+    ...(s.resultAssetId ? [s.resultAssetId] : []),
+  ]).length;
   if (shown !== screenshots) {
     fail(`${name}: its page shows ${shown} of ${screenshots} screenshots`);
   }
   for (const step of bundle.steps) {
     const label = `${name} step ${step.index}`;
+    await verifyResult(label, dir, bundle, step);
     if (!step.assetIds?.length && mayLackScreenshot(name, step)) continue;
     if (step.assetIds?.length !== 1) {
       fail(`${label}: expected one Step Screenshot, got ${step.assetIds}`);
@@ -239,6 +271,36 @@ if (bundleDirs.includes(GIFT_CARDS)) {
   }
 }
 
+// Sign-in's last step (Submit bad credentials) ends the test at once after
+// its checks, so the recording rarely has a frame known to show the Login
+// failed page. Its Result Screenshot may be absent, but if present it must
+// show that page's error banner, never the sign-in form before it.
+const SIGN_IN = 'sign-in--sign-in-with-bad-credentials';
+const ERROR_BANNER = [204, 0, 0];
+let signInResult = 'absent';
+
+if (bundleDirs.includes(SIGN_IN)) {
+  const dir = path.join(report, SIGN_IN);
+  const bundle = JSON.parse(
+    await readFile(path.join(dir, 'bundle.json'), 'utf8'),
+  );
+  const last = bundle.steps.at(-1);
+  if (last.resultAssetId) {
+    const data = await readFile(
+      path.join(dir, 'assets', bundle.assets[last.resultAssetId].filename),
+    );
+    const viewport = last.viewport ?? { width: 800, height: 600 };
+    const color = await colorAt(data, { x: 400, y: 140 }, viewport);
+    if (near(color, ERROR_BANNER)) {
+      signInResult = 'shows Login failed';
+    } else {
+      fail(
+        `${SIGN_IN} step ${last.index}: Result Screenshot shows rgb(${color}), not the Login failed banner`,
+      );
+    }
+  }
+}
+
 // The QA Report's index lists every test, all complete, in directory order,
 // and every link leads to a file.
 try {
@@ -260,5 +322,5 @@ try {
 
 if (failed) process.exit(1);
 console.log(
-  `verify-run: ok (${GOLDENS.length} 1.63 golden(s) matched on Playwright 1.56, with Step Screenshots on each page; the index lists every test; ${markedClicks} click point(s) marked)`,
+  `verify-run: ok (${GOLDENS.length} 1.63 golden(s) matched on Playwright 1.56, with Step Screenshots on each page; the index lists every test; ${markedClicks} click point(s) marked; ${results} Result Screenshot(s); sign-in's result ${signInResult})`,
 );

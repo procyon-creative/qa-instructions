@@ -698,19 +698,95 @@ test('a later trace without per-action screenshots falls back to the screen reco
   assert.deepEqual(moments(click), ['after']);
   assert.ok(click?.screenshots[0].data.equals(Buffer.from(frame)));
   assert.deepEqual(click?.box, { x: 40, y: 40, width: 120, height: 40 });
-  // No recorded frame is yet trusted to show a result (QI-49).
+  // Without DOM snapshots nothing says the page held still around the
+  // frame, so it is no result.
   assert.equal(click?.result, undefined);
   assert.equal(source.check(VISIBLE)?.result, undefined);
 });
 
-test('trace format 8: no screen recording frame is yet trusted as a result, for an Action or a check', async () => {
-  for (const name of ['v8.zip', 'v8-scroll.zip', 'v8-smooth.zip']) {
-    const source = await TraceScreenshotSource.open(fixture(name));
-    for (const ref of Object.values(V8)) {
-      assert.equal(source.capture(ref)?.result, undefined, `${name} ${ref}`);
-    }
-  }
+/** A frame of a sample trace's screen recording, by its file name. */
+async function recordedFrame(trace: string, file: string): Promise<Buffer> {
+  const entries = unzipSync(await readFile(fixture(trace)));
+  const data = entries[`resources/${file}`];
+  assert.ok(data, `${trace} has ${file}`);
+  return Buffer.from(data);
+}
+
+test('trace format 8: an Action the page held still after has a result, the last frame painted while it did', async () => {
+  // The Far click is the scroll page's last Action, followed only by a 300ms
+  // wait whose DOM snapshots record the page as the click left it, and the
+  // recording painted frames all through the wait. Its result is the last
+  // one painted before the wait's last snapshot.
+  const source = await TraceScreenshotSource.open(fixture('v8-scroll.zip'));
+  const result = source.capture(V8_SCROLL.FAR)?.result;
+  assert.ok(result, 'the Far click has a result');
+  assert.equal(result.moment, 'after');
+  assert.equal(result.contentType, 'image/jpeg');
+  assert.ok(
+    result.data.equals(
+      await recordedFrame(
+        'v8-scroll.zip',
+        'page@66ea15b2744685946edfacde8c8ec471-1790474026904.jpeg',
+      ),
+    ),
+  );
+  // Scrolled to Far, clicked (probed beside its label).
+  assertColor(
+    await jpegPixel(result, 20, 140),
+    SCROLL_PAGE.clickedButton,
+    'Far, clicked',
+  );
+});
+
+test('trace format 8: an Action no later DOM snapshot shows the page held still after has no result', async () => {
+  // The scroll page's trace without the wait's snapshots, as when the test
+  // ends right after the click: every frame painted after it is as before,
+  // but nothing records the page as it was when they were painted.
+  const entries = unzipSync(await readFile(fixture('v8-scroll.zip')));
+  entries['0-trace.trace'] = strToU8(
+    strFromU8(entries['0-trace.trace'])
+      .split('\n')
+      .filter((line) => !/"snapshotName":"(before|after)@call@18"/.test(line))
+      .join('\n'),
+  );
+  const source = await openEntries(entries);
+  assert.ok(source.capture(V8_SCROLL.FAR));
+  assert.equal(source.capture(V8_SCROLL.FAR)?.result, undefined);
+});
+
+test('trace format 8: a fill whose smooth scroll was under way in every frame after it has no result', async () => {
+  // Frames were painted all through the scroll, but the page changed from
+  // how the fill left it before any of them could show it.
+  const source = await TraceScreenshotSource.open(fixture('v8-smooth.zip'));
+  assert.ok(source.capture(V8_SMOOTH.FILL));
+  assert.equal(source.capture(V8_SMOOTH.FILL)?.result, undefined);
+});
+
+test('trace format 8: the last step of a test that ends at once after its check has no result', async () => {
+  // The boots page's click and its check, the test's last calls: the
+  // recording painted no frame after the click, so none shows its result.
+  const source = await TraceScreenshotSource.open(
+    fixture('v8-scroll-still.zip'),
+  );
+  const click = ActionRef.of(
+    6,
+    `Click getByRole('button', { name: 'Add Trail boots to cart' })`,
+  );
+  const added = CheckRef.of(1, 'Expect "toBeVisible"');
+  assert.ok(source.capture(click));
+  assert.ok(source.check(added));
+  assert.equal(source.capture(click)?.result, undefined);
+  assert.equal(source.check(added)?.result, undefined);
+});
+
+test('trace format 8: steps whose page changed too soon before any frame have no result', async () => {
+  // The sample scenario: every frame was painted within 50ms of the page
+  // changing, so it may still show the page from before the change.
   const source = await TraceScreenshotSource.open(fixture('v8.zip'));
+  for (const ref of Object.values(V8)) {
+    assert.ok(source.capture(ref), ref);
+    assert.equal(source.capture(ref)?.result, undefined, ref);
+  }
   assert.ok(source.check(VISIBLE), 'the check is in the trace');
   assert.equal(source.check(VISIBLE)?.result, undefined);
 });

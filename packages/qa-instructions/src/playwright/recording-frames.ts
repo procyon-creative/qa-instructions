@@ -137,6 +137,33 @@ export class RecordingFrames {
   }
 
   /**
+   * The frame showing the page as the call left it, for a Result
+   * Screenshot: the last one painted after the call ended while the page's
+   * DOM snapshots record it as it was at the call's `after` snapshot. The
+   * page must be recorded so from at least PAINT_LAG before the frame was
+   * painted (an earlier change may not have reached it yet) through a
+   * snapshot taken after it, and by every snapshot before the next call
+   * could change the page, so the checks that follow found the page it
+   * shows. Otherwise none: a test that ends at once after its last check
+   * leaves no such frame, and neither does a page still moving, loading, or
+   * scrolling after the call.
+   */
+  result(call: RecordedCall): ScreencastFrame | undefined {
+    const { pageId, afterSnapshot, nextChange } = call;
+    const end = call.endTime ?? call.startTime;
+    if (afterSnapshot === undefined || end === undefined) return undefined;
+    const held = this.pages.heldUntil(pageId, afterSnapshot, nextChange);
+    return (
+      held &&
+      this.screencast.lastPaintedBetween(
+        pageId,
+        Math.max(end, held.since + PAINT_LAG),
+        held.lastSeen,
+      )
+    );
+  }
+
+  /**
    * Whether the page is known not to have scrolled between the call's end
    * and the frame: its DOM snapshots record the scroll offsets it ended
    * with through one taken after the frame was painted, or through the

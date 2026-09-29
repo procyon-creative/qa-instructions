@@ -604,7 +604,7 @@ export class TraceScreenshotSource implements ScreenshotSource {
                 ref,
                 record,
                 images: this.images(record, calls, frames),
-                result: this.resultImage(record),
+                result: this.resultImage(record, calls, frames),
               },
             ]
           : [];
@@ -613,7 +613,7 @@ export class TraceScreenshotSource implements ScreenshotSource {
     const checkResults = new Map(
       TraceChecks.stepIds(testEvents).flatMap((stepId) => {
         const record = calls.forStep(stepId);
-        const result = record && this.resultImage(record);
+        const result = record && this.resultImage(record, calls, frames);
         return result ? [[stepId, result] as const] : [];
       }),
     );
@@ -678,7 +678,7 @@ export class TraceScreenshotSource implements ScreenshotSource {
     calls: TraceCalls,
     frames: RecordingFrames,
   ): ImageRef[] {
-    if (SKIPPABLE_METHODS.has(record.method) && !record.inputSent) return [];
+    if (this.skipped(record)) return [];
     if (record.screenshots.length > 0) return record.screenshots;
     const call = calls.recorded(record);
     const action = frames.atAction(call);
@@ -692,12 +692,28 @@ export class TraceScreenshotSource implements ScreenshotSource {
    * Action, or a check the browser ran): the call's own screenshot from once
    * it was done (`snapshots.screen`, Playwright 1.63+). Playwright takes it
    * after the call returned, so for a check it shows the page the check has
-   * just passed on. Without per-action screenshots (before 1.63), none yet:
-   * the screen recording's frames are not yet known to be trustworthy for
-   * this (QI-49 adds them here).
+   * just passed on. Without per-action screenshots (before 1.63), a frame of
+   * the screen recording, only when the page's DOM snapshots show it
+   * pictures the page as the call left it (see `RecordingFrames.result`);
+   * otherwise none. A check Playwright skipped has none, as for its Step
+   * Screenshot.
    */
-  private static resultImage(record: CallRecord): ImageRef | undefined {
-    return record.screenshots.find(({ moment }) => moment === 'after');
+  private static resultImage(
+    record: CallRecord,
+    calls: TraceCalls,
+    frames: RecordingFrames,
+  ): ImageRef | undefined {
+    if (this.skipped(record)) return undefined;
+    if (record.screenshots.length > 0) {
+      return record.screenshots.find(({ moment }) => moment === 'after');
+    }
+    const frame = frames.result(calls.recorded(record));
+    return frame && { moment: 'after', file: frame.file };
+  }
+
+  /** A `check` or `uncheck` Playwright ended without input, the box already as asked. */
+  private static skipped(record: CallRecord): boolean {
+    return SKIPPABLE_METHODS.has(record.method) && !record.inputSent;
   }
 
   private static screenshot(
