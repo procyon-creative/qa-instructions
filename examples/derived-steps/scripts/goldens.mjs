@@ -8,35 +8,36 @@ export const root = path.join(
   '..',
 );
 
-/** Rendered QA Instructions and the golden file each must equal. */
+/** The QA Report the main run writes, in the reporter's default folder. */
+export const REPORT = 'qa-report';
+
+/**
+ * A file the run wrote into a test's directory of a QA Report:
+ * `qa-report[/<folder>]/<test>/qa-steps.<ext>`. No render step runs.
+ */
+function reported(test, ext, folder = '') {
+  return path.posix.join(REPORT, folder, test, `qa-steps.${ext}`);
+}
+
+/** Jira-ready text in the main QA Report, and the golden it must equal. */
+function text(test) {
+  return { rendered: reported(test, 'txt'), golden: `golden/${test}.txt` };
+}
+
+/** QA Report files and the golden file each must equal. */
 export const GOLDENS = [
-  {
-    rendered: 'qa-steps-out/sign-in--sign-in-with-bad-credentials.txt',
-    golden: 'golden/sign-in--sign-in-with-bad-credentials.txt',
-  },
+  text('sign-in--sign-in-with-bad-credentials'),
   // A test with no groups reads the same under every test.step presentation.
-  {
-    rendered: 'qa-steps-out/collapse/sign-in--sign-in-with-bad-credentials.txt',
+  ...['collapse', 'ignore'].map((folder) => ({
+    rendered: reported('sign-in--sign-in-with-bad-credentials', 'txt', folder),
     golden: 'golden/sign-in--sign-in-with-bad-credentials.txt',
-  },
-  {
-    rendered: 'qa-steps-out/ignore/sign-in--sign-in-with-bad-credentials.txt',
-    golden: 'golden/sign-in--sign-in-with-bad-credentials.txt',
-  },
+  })),
   // One golden per test.step presentation: sections (default), collapse, ignore.
-  {
-    rendered: 'qa-steps-out/grouped--sign-in-with-good-credentials.txt',
-    golden: 'golden/grouped--sign-in-with-good-credentials.txt',
-  },
-  {
-    rendered:
-      'qa-steps-out/collapse/grouped--sign-in-with-good-credentials.txt',
-    golden: 'golden/collapse/grouped--sign-in-with-good-credentials.txt',
-  },
-  {
-    rendered: 'qa-steps-out/ignore/grouped--sign-in-with-good-credentials.txt',
-    golden: 'golden/ignore/grouped--sign-in-with-good-credentials.txt',
-  },
+  text('grouped--sign-in-with-good-credentials'),
+  ...['collapse', 'ignore'].map((folder) => ({
+    rendered: reported('grouped--sign-in-with-good-credentials', 'txt', folder),
+    golden: `golden/${folder}/grouped--sign-in-with-good-credentials.txt`,
+  })),
   // Deliberately failing tests, run with retries (playwright.failing.config.ts).
   ...[
     'failing--sign-in-shows-the-wrong-user',
@@ -45,78 +46,52 @@ export const GOLDENS = [
     'failing--flaky-sign-in-passes-on-retry',
     'failing--sign-in-despite-failed-soft-checks',
   ].map((name) => ({
-    rendered: `qa-steps-out/failing/${name}.txt`,
+    rendered: reported(name, 'txt', 'failing'),
     golden: `golden/failing/${name}.txt`,
   })),
   // A password field and a configured mask pattern: both masked.
-  {
-    rendered: 'qa-steps-out/login--sign-in-with-a-password.txt',
-    golden: 'golden/login--sign-in-with-a-password.txt',
-  },
+  text('login--sign-in-with-a-password'),
   // A key press with a checked effect: Tab moves focus to Password.
-  {
-    rendered:
-      'qa-steps-out/keyboard--move-from-username-to-password-with-tab.txt',
-    golden: 'golden/keyboard--move-from-username-to-password-with-tab.txt',
-  },
-  {
-    rendered: 'qa-steps-out/scripted-page--read-the-faq.txt',
-    golden: 'golden/scripted-page--read-the-faq.txt',
-  },
+  text('keyboard--move-from-username-to-password-with-tab'),
+  text('scripted-page--read-the-faq'),
   // The FAQ's script, on a page it changes nothing on: no warning.
-  {
-    rendered:
-      'qa-steps-out/scripted-page--open-collapsed-sections-on-a-page-without-any.txt',
-    golden:
-      'golden/scripted-page--open-collapsed-sections-on-a-page-without-any.txt',
-  },
-  {
-    rendered: 'qa-steps-out/scripted-page--subscribe-to-the-newsletter.txt',
-    golden: 'golden/scripted-page--subscribe-to-the-newsletter.txt',
-  },
-  // Markdown and HTML for bundles covering screenshots, warning steps,
-  // nested Sections, an approximate step, and an incomplete (failed) test.
+  text('scripted-page--open-collapsed-sections-on-a-page-without-any'),
+  text('scripted-page--subscribe-to-the-newsletter'),
+  // Each test's page (HTML) and Markdown for tests covering screenshots,
+  // warning steps, nested Sections, an approximate step, and an incomplete
+  // (failed) test.
   ...[
-    'sign-in--sign-in-with-bad-credentials',
-    'scripted-page--read-the-faq',
-    'grouped--sign-in-with-good-credentials',
-    'scripted-page--subscribe-to-the-newsletter',
-    'failing/failing--sign-in-shows-the-wrong-user',
-  ].flatMap((name) =>
+    ['', 'sign-in--sign-in-with-bad-credentials'],
+    ['', 'scripted-page--read-the-faq'],
+    ['', 'grouped--sign-in-with-good-credentials'],
+    ['', 'scripted-page--subscribe-to-the-newsletter'],
+    ['failing', 'failing--sign-in-shows-the-wrong-user'],
+  ].flatMap(([folder, name]) =>
     ['md', 'html'].map((ext) => ({
-      rendered: `qa-steps-out/${name}.${ext}`,
-      golden: `golden/${name}.${ext}`,
-      bundleDir: `qa-runs/${name}`,
+      rendered: reported(name, ext, folder),
+      golden: `golden/${path.posix.join(folder, name)}.${ext}`,
+      bundleDir: path.posix.join(REPORT, folder, name),
     })),
   ),
-  {
-    rendered: 'qa-steps-out/moving-ui--register-a-warranty-from-the-menu.txt',
-    golden: 'golden/moving-ui--register-a-warranty-from-the-menu.txt',
-  },
+  text('moving-ui--register-a-warranty-from-the-menu'),
   // Checks with the author's messages, on values read into variables.
-  {
-    rendered: 'qa-steps-out/cart--add-credits-to-the-cart.txt',
-    golden: 'golden/cart--add-credits-to-the-cart.txt',
-  },
+  text('cart--add-credits-to-the-cart'),
   // A field and button far below the fold: Playwright scrolls to each.
-  {
-    rendered:
-      'qa-steps-out/long-page--order-boots-from-the-bottom-of-the-page.txt',
-    golden: 'golden/long-page--order-boots-from-the-bottom-of-the-page.txt',
-  },
+  text('long-page--order-boots-from-the-bottom-of-the-page'),
   // A form below the fold on a smoothly scrolling page.
-  {
-    rendered:
-      'qa-steps-out/long-page--order-gift-cards-on-a-smoothly-scrolling-page.txt',
-    golden:
-      'golden/long-page--order-gift-cards-on-a-smoothly-scrolling-page.txt',
-  },
+  text('long-page--order-gift-cards-on-a-smoothly-scrolling-page'),
   // Elements found by CSS selector and test id, named as the page shows them.
+  text('certificates--add-three-recs-to-the-cart'),
+  // Each QA Report's index: every test, its status, and its links.
+  { rendered: `${REPORT}/index.html`, golden: 'golden/index.html' },
   {
-    rendered: 'qa-steps-out/certificates--add-three-recs-to-the-cart.txt',
-    golden: 'golden/certificates--add-three-recs-to-the-cart.txt',
+    rendered: `${REPORT}/failing/index.html`,
+    golden: 'golden/failing/index.html',
   },
 ];
+
+/** QA Report folders whose index links must all lead to files. */
+export const REPORT_FOLDERS = [REPORT, `${REPORT}/failing`];
 
 const DATA_URI = /data:image\/png;base64,[A-Za-z0-9+/=]+/g;
 
@@ -143,7 +118,7 @@ export const SECRETS = [
   'correct-horse-battery-staple',
   'tester@qa.example.com',
 ];
-export const OUTPUT_DIRS = ['qa-runs', 'qa-steps-out'];
+export const OUTPUT_DIRS = [REPORT];
 
 /**
  * Hand-written expectations for each bundle's Step Screenshots: one per QA

@@ -2,9 +2,9 @@
 
 ## Goal
 
-Turn what an existing Playwright test already does into QA Instructions a person can follow by hand, without changing the test. The developer installs one package and adds one reporter to their Playwright config; every test run then produces QA Instructions per test, rendered to the chosen formats. A separate command re-renders saved bundles.
+Turn what an existing Playwright test already does into QA Instructions a person can follow by hand, without changing the test. The developer installs one package and adds one reporter to their Playwright config; every test run then leaves a QA Report: an index of every test, each test's page with its screenshots, and its Jira-ready text. A separate command re-renders saved bundles.
 
-The decisions and their alternatives are recorded in [ADR 0001](./adr/0001-reporter-derived-qa-steps.md) and [ADR 0002](./adr/0002-one-package-with-entry-points.md) (one package with entry points). Vocabulary (QA Instructions, QA Step, Action, Expected Result, Section, Step Screenshot, QA Report, Result Screenshot, Highlight) is defined in [CONTEXT.md](../CONTEXT.md).
+The decisions and their alternatives are recorded in [ADR 0001](./adr/0001-reporter-derived-qa-steps.md), [ADR 0002](./adr/0002-one-package-with-entry-points.md) (one package with entry points), and [ADR 0003](./adr/0003-report-follows-host-runner-conventions.md) (the QA Report behaves like the host runner's own HTML report). Vocabulary (QA Instructions, QA Step, Action, Expected Result, Section, Step Screenshot, QA Report, Result Screenshot, Highlight) is defined in [CONTEXT.md](../CONTEXT.md).
 
 ## Setup
 
@@ -16,7 +16,7 @@ export default defineConfig({
     ['list'],
     [
       '@procyon-creative/qa-instructions/playwright',
-      { outputDir: 'qa-runs', formats: ['qa-steps', 'html'] },
+      { outputFolder: 'qa-report' },
     ],
   ],
 });
@@ -29,8 +29,8 @@ Post-test CI step:
 ```yaml
 - uses: actions/upload-artifact@v4
   with:
-    name: qa-instructions
-    path: qa-runs/
+    name: qa-report
+    path: qa-report/
 ```
 
 ## Pipeline
@@ -52,13 +52,14 @@ One package, `@procyon-creative/qa-instructions`, with a source folder and an en
 
 ### Core: `src/core/`, entry point `@procyon-creative/qa-instructions`
 
-| Module          | Responsibility                                                                                                                                                |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `events`        | Inbound port: runner-neutral test events (test start/end, action, check)                                                                                      |
-| `instructions/` | `QaInstructionsRecorder` turns one test's events into QA Instructions; `StepPhraser` words them                                                               |
-| `model`         | Bundle types: `QaRunBundle`, `QaStep`, `QaAsset`                                                                                                              |
-| `bundle/`       | In-memory bundle builder; `writeBundle(dir, bundle, assets)`, `readBundle(dir)`, `bundleDirName()`; `BundleRenderer` renders a bundle directory to one format |
-| `render/`       | Pure transforms: `render(bundle, format)` for `qa-steps`, `markdown`, `html`, `json`                                                                          |
+| Module          | Responsibility                                                                                                                                                  |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `events`        | Inbound port: runner-neutral test events (test start/end, action, check)                                                                                        |
+| `instructions/` | `QaInstructionsRecorder` turns one test's events into QA Instructions; `StepPhraser` words them                                                                 |
+| `model`         | Bundle types: `QaRunBundle`, `QaStep`, `QaAsset`                                                                                                                |
+| `bundle/`       | In-memory bundle builder; `writeBundle(dir, bundle, assets)`, `readBundle(dir)`, `bundleDirName()`; `BundleRenderer` renders a bundle directory to one format   |
+| `render/`       | Pure transforms: `render(bundle, format)` for `qa-steps`, `markdown`, `html`, `json`                                                                            |
+| `report/`       | `QaReport` writes the QA Report: each test's bundle, page, and Jira-ready text, stale-test removal, and `index.html` (`QaReportIndexView`, `QaReportIndexHtml`) |
 
 The recorder makes one QA Step per user Action (opening a URL, clicking, typing, pressing a key, choosing an option). Test plumbing a tester cannot repeat (waits, scripts, value reads, API requests, setup) is dropped. The checks that follow an Action become that QA Step's Expected Result; an Action with no following check has none.
 
@@ -69,8 +70,8 @@ The recorder makes one QA Step per user Action (opening a URL, clicking, typing,
 The default export is `QaInstructionsReporter`, a Playwright `Reporter`:
 
 - On `onTestEnd`, `PlaywrightStepTranslator` walks the test's `pw:api` and `expect` steps and emits core test events.
-- The core recorder builds the bundle, which is written to `<outputDir>/<file>--<test title>/`.
-- It then renders each of its `formats` beside `bundle.json` (`qa-steps.txt`, `qa-steps.md`, `qa-steps.html`, `qa-steps.json`) with the core's `BundleRenderer`.
+- The core recorder builds the bundle; on `onEnd` the reporter hands each one to the core's `QaReport`, which writes it to `<outputFolder>/<file>--<test title>/` and renders the test's page (`qa-steps.html`), its Jira-ready text (`qa-steps.txt`), and any extra `formats` (`qa-steps.md`, `qa-steps.json`) beside it with the core's `BundleRenderer`, then writes `<outputFolder>/index.html`.
+- `outputFolder` is resolved as Playwright resolves its HTML reporter's: relative to the config file, default `qa-report/` beside the nearest `package.json`.
 - It never throws into the test run; a failure to write is logged as a warning.
 
 ### CLI: `src/cli/`, the `qa-instructions` command
@@ -79,7 +80,7 @@ Re-renders saved bundles, one format into a separate directory, without re-runni
 
 ```bash
 # Render all bundles collected during the run
-qa-instructions render qa-runs/ --format qa-steps --out qa-steps-out/
+qa-instructions render qa-report/ --format qa-steps --out qa-steps-out/
 ```
 
 Also usable programmatically:
@@ -87,7 +88,7 @@ Also usable programmatically:
 ```typescript
 import { readBundle, renderQaSteps } from '@procyon-creative/qa-instructions';
 
-const bundle = await readBundle('qa-runs/login--sign-in');
+const bundle = await readBundle('qa-report/login--sign-in');
 const text = renderQaSteps(bundle);
 ```
 
@@ -130,14 +131,16 @@ interface QaAsset {
 }
 ```
 
-On disk, a bundle is a directory:
+On disk, a bundle is a directory of the QA Report:
 
 ```
-qa-runs/
+qa-report/
+  index.html            # every test, its status, and links
   sign-in--sign-in-with-bad-credentials/
     bundle.json
     assets/
-    qa-steps.txt        # one file per reporter format
+    qa-steps.html       # the test's page, screenshots embedded
+    qa-steps.txt        # Jira-ready text
 ```
 
 Renderers read `bundle.json` and resolve assets from `assets/`. No runner-specific fields in the step model.

@@ -51,6 +51,14 @@ function mockTestCase(tags: string[] = []): TestCase {
   } as unknown as TestCase;
 }
 
+/** The test directories in a QA Report folder (leaving out `index.html`). */
+async function testDirs(out: string): Promise<string[]> {
+  return (await readdir(out, { withFileTypes: true }))
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
+}
+
 async function runAttempts(
   attempts: Attempt[],
   options: QaInstructionsReporterOptions = {},
@@ -60,10 +68,15 @@ async function runAttempts(
   assetFiles: string[];
   /** The rendered QA Instructions beside bundle.json, by filename. */
   rendered: Map<string, string>;
+  /** The QA Report's `index.html`. */
+  index: string;
 }> {
   const out = await mkdtemp(path.join(tmpdir(), 'qa-reporter-'));
   try {
-    const reporter = new QaInstructionsReporter({ ...options, outputDir: out });
+    const reporter = new QaInstructionsReporter({
+      ...options,
+      outputFolder: out,
+    });
     for (const {
       status = 'passed',
       retry = 0,
@@ -86,10 +99,11 @@ async function runAttempts(
       rendered.set(name, await readFile(path.join(dir, name), 'utf8'));
     }
     return {
-      dirs: await readdir(out),
+      dirs: await testDirs(out),
       bundle: JSON.parse(raw) as QaRunBundle,
       assetFiles: (await readdir(path.join(dir, 'assets'))).sort(),
       rendered,
+      index: await readFile(path.join(out, 'index.html'), 'utf8'),
     };
   } finally {
     await rm(out, { recursive: true, force: true });
@@ -238,10 +252,10 @@ test('a failed soft check flags its QA Step and the later QA Steps still follow'
   }
 });
 
-test('a skipped test yields no QA Instructions', async () => {
+test('a skipped test yields no QA Instructions, only an empty index', async () => {
   const out = await mkdtemp(path.join(tmpdir(), 'qa-reporter-'));
   try {
-    const reporter = new QaInstructionsReporter({ outputDir: out });
+    const reporter = new QaInstructionsReporter({ outputFolder: out });
     await reporter.onTestEnd(mockTestCase(), {
       status: 'skipped',
       retry: 0,
@@ -249,7 +263,7 @@ test('a skipped test yields no QA Instructions', async () => {
       steps: [step(navigate)],
     } as unknown as TestResult);
     await reporter.onEnd();
-    assert.deepEqual(await readdir(out).catch(() => []), []);
+    assert.deepEqual(await readdir(out), ['index.html']);
   } finally {
     await rm(out, { recursive: true, force: true });
   }
@@ -449,7 +463,10 @@ async function bundleDirsAfterRun(
 ): Promise<string[]> {
   const out = await mkdtemp(path.join(tmpdir(), 'qa-reporter-'));
   try {
-    const reporter = new QaInstructionsReporter({ ...options, outputDir: out });
+    const reporter = new QaInstructionsReporter({
+      ...options,
+      outputFolder: out,
+    });
     await reporter.onTestEnd(mockTestCase(tags), {
       status: 'passed',
       retry: 0,
@@ -459,7 +476,7 @@ async function bundleDirsAfterRun(
       ],
     } as unknown as TestResult);
     await reporter.onEnd();
-    return await readdir(out);
+    return await testDirs(out);
   } finally {
     await rm(out, { recursive: true, force: true });
   }
@@ -744,29 +761,39 @@ test('with the trace setting on, each QA Step gets a Step Screenshot from the tr
   assert.deepEqual(bundle.steps[2].clickPoint, { x: 100, y: 60 });
 });
 
-test('by default the reporter writes Jira text beside each bundle', async () => {
-  const { rendered } = await runAttempts([{ steps: [navigate, clickSignIn] }]);
-  assert.deepEqual([...rendered.keys()], ['qa-steps.txt']);
-  assert.equal(
-    rendered.get('qa-steps.txt'),
-    '1. Open http://127.0.0.1:4321/\n2. Click the **Sign in** link\n',
+test('with no options, each test gets its page with screenshots and its Jira text', async () => {
+  const { rendered, index } = await runAttempts([
+    { steps: sampleSteps, attachments: sampleTrace },
+  ]);
+  assert.deepEqual([...rendered.keys()], ['qa-steps.html', 'qa-steps.txt']);
+  assert.match(rendered.get('qa-steps.txt') ?? '', /^1\. Open /);
+  assert.match(rendered.get('qa-steps.html') ?? '', /data:image\/png;base64,/);
+  assert.match(
+    index,
+    /<a href="sign-in--sign-in-with-bad-credentials\/qa-steps.html">Sign in with bad credentials<\/a><\/td>\n<td class="status complete">Complete/,
   );
 });
 
-test('the reporter writes each format in its formats option', async () => {
+test('a failed test is marked incomplete in the index', async () => {
+  const { index } = await runAttempts([
+    { status: 'failed', steps: [navigate, clickSignIn] },
+  ]);
+  assert.match(index, /<td class="status incomplete">Incomplete<\/td>/);
+});
+
+test('the formats option adds Markdown and JSON to the page and Jira text', async () => {
   const { rendered } = await runAttempts(
     [{ steps: sampleSteps, attachments: sampleTrace }],
-    { formats: ['markdown', 'html', 'json'] },
+    { formats: ['markdown', 'json'] },
   );
   assert.deepEqual(
     [...rendered.keys()],
-    ['qa-steps.html', 'qa-steps.json', 'qa-steps.md'],
+    ['qa-steps.html', 'qa-steps.json', 'qa-steps.md', 'qa-steps.txt'],
   );
   assert.match(
     rendered.get('qa-steps.md') ?? '',
     /!\[Step 1: [^\]]*\]\(assets\/step-01\.png\)/,
   );
-  assert.match(rendered.get('qa-steps.html') ?? '', /data:image\/png;base64,/);
 });
 
 test('unknown formats are ignored with one warning', async () => {
@@ -777,18 +804,14 @@ test('unknown formats are ignored with one warning', async () => {
     const { rendered } = await runAttempts([{ steps: [navigate] }], {
       formats: ['pdf', 'markdown'],
     } as unknown as QaInstructionsReporterOptions);
-    assert.deepEqual([...rendered.keys()], ['qa-steps.md']);
+    assert.deepEqual(
+      [...rendered.keys()],
+      ['qa-steps.html', 'qa-steps.md', 'qa-steps.txt'],
+    );
   } finally {
     console.warn = warn;
   }
   assert.equal(warnings.filter((w) => /formats/.test(w)).length, 1);
-});
-
-test('an empty formats option writes only the bundle', async () => {
-  const { rendered } = await runAttempts([{ steps: [navigate] }], {
-    formats: [],
-  });
-  assert.deepEqual([...rendered.keys()], []);
 });
 
 function highlights(bundle: QaRunBundle) {
@@ -944,7 +967,7 @@ async function writtenText(dir: string): Promise<string> {
 test('a value typed into a password field, as the trace recorded the page, is never written', async () => {
   const out = await mkdtemp(path.join(tmpdir(), 'qa-reporter-'));
   try {
-    const reporter = new QaInstructionsReporter({ outputDir: out });
+    const reporter = new QaInstructionsReporter({ outputFolder: out });
     await reporter.onTestEnd(mockTestCase(), {
       status: 'passed',
       retry: 0,
@@ -1017,7 +1040,7 @@ test('reporter masks the values and patterns in its mask option', async () => {
 
 test('reporter never throws into the test run', async () => {
   const reporter = new QaInstructionsReporter({
-    outputDir: '/dev/null/cannot-write-here',
+    outputFolder: '/dev/null/cannot-write-here',
   });
   const warn = console.warn;
   console.warn = () => {};
@@ -1049,7 +1072,7 @@ async function warningsOfRun(
   console.warn = (message: unknown) => warnings.push(String(message));
   const out = await mkdtemp(path.join(tmpdir(), 'qa-reporter-'));
   try {
-    const reporter = new QaInstructionsReporter({ outputDir: out });
+    const reporter = new QaInstructionsReporter({ outputFolder: out });
     reporter.onBegin({ version } as never);
     for (const title of ['first', 'second']) {
       reporter.onTestEnd(
@@ -1063,7 +1086,7 @@ async function warningsOfRun(
       );
     }
     await reporter.onEnd();
-    const dir = path.join(out, (await readdir(out)).sort()[0]);
+    const dir = path.join(out, (await testDirs(out))[0]);
     const bundle = JSON.parse(
       await readFile(path.join(dir, 'bundle.json'), 'utf8'),
     ) as QaRunBundle;
@@ -1133,13 +1156,14 @@ test('an error in any reporter hook never reaches the test run and is logged onc
   const warnings: string[] = [];
   const warn = console.warn;
   console.warn = (message: unknown) => warnings.push(String(message));
+  const out = await mkdtemp(path.join(tmpdir(), 'qa-reporter-'));
   try {
     const broken = {
       testStart: () => {
         throw new Error('broken translator');
       },
     } as unknown as ConstructorParameters<typeof QaInstructionsReporter>[1];
-    const reporter = new QaInstructionsReporter({}, broken);
+    const reporter = new QaInstructionsReporter({ outputFolder: out }, broken);
     reporter.onBegin(undefined as never);
     for (const title of ['first', 'second']) {
       reporter.onTestEnd(
@@ -1155,6 +1179,7 @@ test('an error in any reporter hook never reaches the test run and is logged onc
     await reporter.onEnd();
   } finally {
     console.warn = warn;
+    await rm(out, { recursive: true, force: true });
   }
   assert.equal(warnings.length, 1);
   assert.match(warnings[0], /broken translator/);
@@ -1167,7 +1192,7 @@ test('bad reporter options never stop the test run', async () => {
   const out = await mkdtemp(path.join(tmpdir(), 'qa-reporter-'));
   try {
     const reporter = new QaInstructionsReporter({
-      outputDir: out,
+      outputFolder: out,
       select: { files: 'tests/*.spec.ts' },
     } as unknown as QaInstructionsReporterOptions);
     reporter.onTestEnd(mockTestCase(), {
@@ -1178,7 +1203,7 @@ test('bad reporter options never stop the test run', async () => {
     } as unknown as TestResult);
     await reporter.onEnd();
     // The bad option is ignored: every test is selected.
-    assert.equal((await readdir(out)).length, 1);
+    assert.equal((await testDirs(out)).length, 1);
   } finally {
     console.warn = warn;
     await rm(out, { recursive: true, force: true });

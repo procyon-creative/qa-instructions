@@ -15,7 +15,7 @@ export default defineConfig({
     ['list'],
     [
       '@procyon-creative/qa-instructions/playwright',
-      { outputDir: 'qa-runs/failing' },
+      { outputFolder: 'qa-report/failing', formats: ['markdown'] },
     ],
   ],
 });

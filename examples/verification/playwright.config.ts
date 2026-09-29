@@ -8,8 +8,8 @@ export default defineConfig({
   reporter: [
     ['list'],
     ['html', { open: 'never' }],
-    // The reporter writes qa-runs/<test>/qa-steps.txt itself; no render step.
-    ['@procyon-creative/qa-instructions/playwright', { outputDir: 'qa-runs' }],
+    // Only the reporter line: the run writes the QA Report to qa-report/.
+    ['@procyon-creative/qa-instructions/playwright'],
   ],
   use: {
     baseURL,

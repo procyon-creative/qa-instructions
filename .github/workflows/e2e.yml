@@ -50,11 +50,11 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: qa-steps
+          name: qa-report
           path: |
-            examples/verification/qa-steps-out/
-            examples/derived-steps/qa-steps-out/
-            examples/derived-steps-1.56/qa-steps-out/
+            examples/verification/qa-report/
+            examples/derived-steps/qa-report/
+            examples/derived-steps-1.56/qa-report/
 
       - uses: actions/upload-artifact@v7
         if: failure()

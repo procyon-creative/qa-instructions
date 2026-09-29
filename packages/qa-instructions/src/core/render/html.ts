@@ -1,4 +1,4 @@
-import { HTML_STYLE } from './html-style.js';
+import { HtmlPage } from './html-page.js';
 import type { StepImages } from './images.js';
 import { InlineMarkup } from './inline-markup.js';
 import { QaWording, type QaInstructionsView, type QaStepView } from './view.js';
@@ -7,35 +7,18 @@ import { QaWording, type QaInstructionsView, type QaStepView } from './view.js';
 const SECTION_LEVEL = 2;
 const MAX_LEVEL = 6;
 
-/** Nothing may load from the network: styles are inline, images data URIs. */
-const CONTENT_SECURITY_POLICY =
-  "default-src 'none'; img-src data:; style-src 'unsafe-inline'";
-
 /**
- * A standalone HTML page: inline styles for light and dark schemes, nested
- * Sections as nested `<section>`s, and each Step Screenshot with alt text
- * from its Action.
+ * A standalone HTML page (see `HtmlPage`): nested Sections as nested
+ * `<section>`s, and each Step Screenshot with alt text from its Action.
  */
 export class HtmlRenderer {
-  constructor(private readonly images?: StepImages) {}
+  constructor(
+    private readonly images?: StepImages,
+    private readonly page = new HtmlPage(),
+  ) {}
 
   render(view: QaInstructionsView): string {
-    const title = InlineMarkup.escapeHtml(view.title);
-    const lines = [
-      '<!doctype html>',
-      '<html lang="en">',
-      '<head>',
-      '<meta charset="utf-8">',
-      '<meta name="viewport" content="width=device-width, initial-scale=1">',
-      '<meta name="color-scheme" content="light dark">',
-      `<meta http-equiv="Content-Security-Policy" content="${CONTENT_SECURITY_POLICY}">`,
-      `<title>${title}</title>`,
-      `<style>\n${HTML_STYLE}\n</style>`,
-      '</head>',
-      '<body>',
-      '<main>',
-      `<h1>${title}</h1>`,
-    ];
+    const lines: string[] = [];
 
     if (view.incomplete) {
       lines.push(
@@ -64,8 +47,7 @@ export class HtmlRenderer {
     }
     lines.push(...Array<string>(open).fill('</section>'));
 
-    lines.push('</main>', '</body>', '</html>');
-    return lines.join('\n') + '\n';
+    return this.page.render(view.title, lines);
   }
 
   private step(step: QaStepView): string[] {

@@ -11,7 +11,7 @@ import { GOLDENS, root, syncSpecs } from './shared.mjs';
 const WARNING =
   "no trace was recorded, so QA Instructions have no Step Screenshots. Add this to playwright.config to get them: use: { trace: 'on' }";
 
-const bundlesDir = path.join(root, 'qa-runs-no-trace');
+const bundlesDir = path.join(root, 'qa-report-no-trace');
 await rm(bundlesDir, { recursive: true, force: true });
 await syncSpecs();
 

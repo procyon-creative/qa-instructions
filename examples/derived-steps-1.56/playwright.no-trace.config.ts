@@ -11,7 +11,7 @@ export default defineConfig({
   reporter: [
     [
       '@procyon-creative/qa-instructions/playwright',
-      { outputDir: 'qa-runs-no-trace' },
+      { outputFolder: 'qa-report-no-trace' },
     ],
   ],
   use: { ...base.use, trace: 'off' },

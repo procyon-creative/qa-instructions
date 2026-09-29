@@ -7,11 +7,14 @@ import { PNG } from 'pngjs';
 import {
   GOLDENS,
   OUTPUT_DIRS,
+  REPORT,
+  REPORT_FOLDERS,
   SCREENSHOT_GOLDENS,
   SECRETS,
   normalizeRendered,
   root,
 } from './goldens.mjs';
+import { brokenIndexLinks, readReportIndex } from './report-index.mjs';
 
 const TOLERANCE = 8;
 
@@ -106,7 +109,7 @@ async function verifyScreenshots(goldenFile) {
 }
 
 async function verifyBundleScreenshots(golden, bundleDirName) {
-  const bundleDir = path.join(root, 'qa-runs', bundleDirName);
+  const bundleDir = path.join(root, REPORT, bundleDirName);
   const bundle = JSON.parse(
     await readFile(path.join(bundleDir, 'bundle.json'), 'utf8'),
   );
@@ -250,7 +253,7 @@ for (const { rendered, golden, bundleDir } of GOLDENS) {
     content = await readFile(actualPath, 'utf8');
   } catch (error) {
     console.error(
-      `verify-run: missing rendered output ${rendered}: ${error.message}`,
+      `verify-run: missing QA Report file ${rendered}: ${error.message}`,
     );
     failed = true;
     continue;
@@ -308,7 +311,20 @@ async function verifyNoSecrets() {
 
 const scanned = await verifyNoSecrets();
 
+for (const folder of REPORT_FOLDERS) {
+  try {
+    if ((await readReportIndex(path.join(root, folder))).length === 0) {
+      fail(`${folder}/index.html lists no tests`);
+    }
+    for (const link of await brokenIndexLinks(path.join(root, folder))) {
+      fail(`${folder}/index.html links to ${link}, which does not exist`);
+    }
+  } catch (error) {
+    fail(`${folder}/index.html: ${error.message}`);
+  }
+}
+
 if (failed) process.exit(1);
 console.log(
-  `verify-run: ok (${GOLDENS.length} text golden(s), ${SCREENSHOT_GOLDENS.length} screenshot golden(s), no secrets in ${scanned} file(s))`,
+  `verify-run: ok (${GOLDENS.length} QA Report golden(s), ${SCREENSHOT_GOLDENS.length} screenshot golden(s), every index link leads to a file, no secrets in ${scanned} file(s))`,
 );

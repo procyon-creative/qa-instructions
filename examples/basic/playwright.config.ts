@@ -5,6 +5,7 @@ export default defineConfig({
   reporter: [
     ['list'],
     ['html', { open: 'never' }],
-    ['@procyon-creative/qa-instructions/playwright', { outputDir: 'qa-runs' }],
+    // Writes the QA Report to qa-report/; open qa-report/index.html.
+    ['@procyon-creative/qa-instructions/playwright'],
   ],
 });

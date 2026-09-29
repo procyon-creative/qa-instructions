@@ -4,11 +4,10 @@
   "type": "module",
   "scripts": {
     "test": "node scripts/sync-specs.mjs && playwright test",
-    "render": "node ../../packages/qa-instructions/dist/cli/index.js render qa-runs --format qa-steps --out qa-steps-out",
     "verify": "node scripts/verify-run.mjs",
     "verify:no-trace": "node scripts/verify-no-trace.mjs",
     "record-fixtures": "node scripts/record-fixtures.mjs",
-    "e2e": "pnpm test && pnpm render && pnpm verify && pnpm verify:no-trace"
+    "e2e": "pnpm test && pnpm verify && pnpm verify:no-trace"
   },
   "devDependencies": {
     "@playwright/test": "1.56.1",

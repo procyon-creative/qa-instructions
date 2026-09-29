@@ -68,7 +68,7 @@ async function bundleFrom(
   const warn = console.warn;
   console.warn = () => {};
   try {
-    const reporter = new QaInstructionsReporter({ outputDir: out });
+    const reporter = new QaInstructionsReporter({ outputFolder: out });
     reporter.onBegin({ version } as never);
     reporter.onTestEnd(
       {
@@ -93,7 +93,7 @@ async function bundleFrom(
       } as unknown as TestResult,
     );
     await reporter.onEnd();
-    const [dir] = await readdir(out);
+    const [dir] = (await readdir(out)).filter((name) => name !== 'index.html');
     return JSON.parse(
       await readFile(path.join(out, dir, 'bundle.json'), 'utf8'),
     ) as QaRunBundle;

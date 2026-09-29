@@ -21,8 +21,8 @@ export default defineConfig({
     [
       '@procyon-creative/qa-instructions/playwright',
       {
-        outputDir: 'qa-runs',
-        formats: ['qa-steps', 'markdown'],
+        outputFolder: 'qa-report',
+        formats: ['markdown'],
         testSteps: 'sections',
         highlight: ['outline', 'clickDot'],
         // Only tests tagged @qa produce QA Instructions:
@@ -44,11 +44,22 @@ export default defineConfig({
 
 Every option is optional; `['@procyon-creative/qa-instructions/playwright']` alone works. See [Reporter options](#reporter-options).
 
-Run your tests as usual (`npx playwright test`); the reporter writes one QA Instructions bundle per test to `qa-runs/<file>--<test title>/`, with the rendered QA Instructions beside it (`qa-steps.txt`, Jira-ready text, by default; see [`formats`](#formats)). Paste `qa-steps.txt` into your ticket's QA Steps. To re-render saved bundles without re-running tests, use [`qa-instructions render`](#render).
+Run your tests as usual (`npx playwright test`). Every run leaves a QA Report in `qa-report/`, with no second command:
+
+```
+qa-report/
+  index.html                      every test, its status, and links
+  <file>--<test title>/
+    qa-steps.html                 the test's page, screenshots embedded
+    qa-steps.txt                  Jira-ready text
+    bundle.json, assets/          the saved data the report is made from
+```
+
+Open `qa-report/index.html` to browse every test's QA Instructions; paste a test's `qa-steps.txt` into your ticket's QA Steps. The pages load nothing from the network, so the folder works offline, from disk, or as a CI artifact. To re-render saved data without re-running tests, use [`qa-instructions render`](#render).
 
 `@playwright/test` is an optional peer dependency used for types only, so the package always runs against your project's own Playwright and never loads a second copy.
 
-With the trace setting on, each QA Step gets a Step Screenshot of the page at the moment of its Action, saved in the bundle's `assets/` and listed in the step's `assetIds`. The element acted on (`elementBox`), for clicks the click point (`clickPoint`), and the page's `viewport` are recorded on the step in CSS pixels. Without the setting, QA Steps are text only.
+With the trace setting on, each QA Step gets a Step Screenshot of the page at the moment of its Action, saved in the test's `assets/` and listed in the step's `assetIds`. The element acted on (`elementBox`), for clicks the click point (`clickPoint`), and the page's `viewport` are recorded on the step in CSS pixels. Without the setting, QA Steps are text only.
 
 ### Setup mistakes
 
@@ -58,20 +69,22 @@ Without the trace setting, QA Steps are text only, and the reporter prints one w
 
 The second element of the reporter entry in `playwright.config.ts`.
 
-| Option      | Type                                                                              | Default                     |
-| ----------- | --------------------------------------------------------------------------------- | --------------------------- |
-| `outputDir` | `string`                                                                          | `'qa-runs'`                 |
-| `formats`   | `('qa-steps' \| 'markdown' \| 'html' \| 'json')[]`                                | `['qa-steps']`              |
-| `select`    | `{ tags?: string[]; files?: string[] }`                                           | every test                  |
-| `testSteps` | `'sections' \| 'collapse' \| 'ignore'`                                            | `'sections'`                |
-| `highlight` | `'outline' \| 'clickDot' \| 'badge' \| 'spotlight'`, a list of these, or `'none'` | `['outline', 'clickDot']`   |
-| `mask`      | `(string \| RegExp)[]`                                                            | none (password fields only) |
+| Option         | Type                                                                              | Default                     |
+| -------------- | --------------------------------------------------------------------------------- | --------------------------- |
+| `outputFolder` | `string`                                                                          | `'qa-report'`               |
+| `formats`      | `('qa-steps' \| 'markdown' \| 'html' \| 'json')[]`                                | none beyond the QA Report   |
+| `select`       | `{ tags?: string[]; files?: string[] }`                                           | every test                  |
+| `testSteps`    | `'sections' \| 'collapse' \| 'ignore'`                                            | `'sections'`                |
+| `highlight`    | `'outline' \| 'clickDot' \| 'badge' \| 'spotlight'`, a list of these, or `'none'` | `['outline', 'clickDot']`   |
+| `mask`         | `(string \| RegExp)[]`                                                            | none (password fields only) |
 
-### `outputDir`
+### `outputFolder`
 
-Where bundles are written, relative to the directory you run Playwright from. Each test gets `<outputDir>/<file>--<test title>/` (with the project, then the line, added only when two tests would otherwise share a directory). A retried test keeps its last attempt.
+The folder the QA Report is written to, named and resolved like the `outputFolder` of Playwright's HTML reporter: relative to the config file, and by default `qa-report/` beside the project's `package.json` (where Playwright puts `playwright-report/`). It replaces the `outputDir` option and `qa-runs/` default of earlier versions.
 
-Every bundle directory the reporter writes holds a `.qa-instructions.json` marker. After a full run, the reporter removes the marked directories that run did not write, such as those of renamed or deleted tests, so `outputDir` holds only that run's QA Instructions. It never removes anything without the marker, and nothing outside `outputDir`.
+The folder holds `index.html`, listing every test in it with its status (Complete, or Incomplete for a test that did not pass) and links to its page and Jira-ready text, and one directory per test, `<outputFolder>/<file>--<test title>/` (with the project, then the line, added only when two tests would otherwise share a directory). A retried test keeps its last attempt.
+
+Every test directory the reporter writes holds a `.qa-instructions.json` marker. After a full run, the reporter removes the marked directories that run did not write, such as those of renamed or deleted tests, so the QA Report holds only that run's tests. It never removes anything without the marker, and nothing outside `outputFolder`.
 
 A partial run removes nothing, so results for tests it didn't run are kept. A run counts as full only when it:
 
@@ -82,26 +95,26 @@ An unrecognized command-line argument also counts as a partial run. A bundle who
 
 ```typescript
 {
-  outputDir: 'artifacts/qa-runs';
+  outputFolder: 'artifacts/qa-report';
 }
 ```
 
 ### `formats`
 
-The rendered QA Instructions the reporter writes into each bundle directory, beside `bundle.json`, once the run ends. The default is `['qa-steps']`; `[]` writes the bundle only.
+More formats to write into each test's directory of the QA Report, beside its page and Jira-ready text, which every test always gets. The default adds none.
 
-| Format     | File            | Step Screenshots                                            |
-| ---------- | --------------- | ----------------------------------------------------------- |
-| `qa-steps` | `qa-steps.txt`  | None                                                        |
-| `markdown` | `qa-steps.md`   | Inline, linked to the bundle's own `assets/`                |
-| `html`     | `qa-steps.html` | Embedded as data URIs; the one file works on its own        |
-| `json`     | `qa-steps.json` | Not included (the bundle itself, as `render --format json`) |
+| Format     | File            | Step Screenshots                                         | Written     |
+| ---------- | --------------- | -------------------------------------------------------- | ----------- |
+| `qa-steps` | `qa-steps.txt`  | None                                                     | Always      |
+| `html`     | `qa-steps.html` | Embedded as data URIs; the one file works on its own     | Always      |
+| `markdown` | `qa-steps.md`   | Inline, linked to the test's own `assets/`               | When listed |
+| `json`     | `qa-steps.json` | Not included (the saved data, as `render --format json`) | When listed |
 
-The output matches [`qa-instructions render`](#render) exactly; only where the files go differs. An unknown format is ignored, with one warning.
+Each file matches [`qa-instructions render`](#render) exactly; only where it goes differs. An unknown format is ignored, with one warning.
 
 ```typescript
 {
-  formats: ['qa-steps', 'markdown', 'html'];
+  formats: ['markdown'];
 }
 ```
 
@@ -151,7 +164,7 @@ The Highlight each Step Screenshot carries on the element its Action touched. Gi
 ```
 
 - Fills get the outline only; navigation and key presses touch no element and get none.
-- Highlights are drawn when the bundle is written, after the run; nothing is injected into the browser. The highlighted image replaces the original in `assets/`, and the bundle's asset lists the marks it carries (`"highlight": ["outline", "clickDot"]`).
+- Highlights are drawn when the QA Report is written, after the run; nothing is injected into the browser. The highlighted image replaces the original in `assets/`, and the bundle's asset lists the marks it carries (`"highlight": ["outline", "clickDot"]`).
 - Positions are scaled from the viewport to the image, so high-DPI (`deviceScaleFactor: 2`) screenshots are marked in the right place.
 - An Approximate Action (a forced click) gets a dashed outline: the element may have moved.
 - Warning steps, and screenshots taken after the Action (the page may have moved on), get no Highlight. On Playwright 1.53–1.62 only a click can get one, its click dot (see [Playwright versions](#playwright-versions)).
@@ -159,7 +172,7 @@ The Highlight each Step Screenshot carries on the element its Action touched. Gi
 
 ### `mask`
 
-More Secrets to mask: exact strings, or regular expressions (every match is masked; no `g` flag needed). Each is replaced with `[masked]` in QA Step text, Expected Results, URLs, Section titles, the test title, and bundle directory names.
+More Secrets to mask: exact strings, or regular expressions (every match is masked; no `g` flag needed). Each is replaced with `[masked]` in QA Step text, Expected Results, URLs, Section titles, the test title, and test directory names.
 
 ```typescript
 {
@@ -215,13 +228,13 @@ When the test found the element inside another one (`form.locator(…)` on `page
 
 ## Render
 
-The reporter renders as it writes (see [`formats`](#formats)). The `qa-instructions` command, from the same package, re-renders saved bundles without re-running tests, to one format into a separate directory:
+Every test run writes its QA Report; nothing needs rendering by hand. The `qa-instructions` command, from the same package, re-renders saved data without re-running tests, to one format into a separate directory:
 
 ```bash
-npx qa-instructions render <bundle-dir> --format <format> --out <dir>
+npx qa-instructions render <folder> --format <format> --out <dir>
 ```
 
-`<bundle-dir>` is the reporter's `outputDir` (every bundle directly inside it is rendered) or one bundle's directory. `--format` defaults to `qa-steps` and `--out` to `qa-steps-out`. For example, `qa-instructions render qa-runs --format qa-steps --out qa-steps-out`, then paste `qa-steps-out/*.txt` into your ticket's QA Steps.
+`<folder>` is the QA Report's `outputFolder` (every test directory directly inside it is rendered) or one test's directory. `--format` defaults to `qa-steps` and `--out` to `qa-steps-out`. For example, `qa-instructions render qa-report --format markdown --out qa-steps-out`.
 
 Every format shows the same QA Steps, Expected Results, Sections, warnings, and status:
 
@@ -237,24 +250,24 @@ The HTML page has inline styles for light and dark color schemes, no scripts or 
 ## Architecture
 
 ```
-Playwright reporter (adapter)  →  core (test events → QA Instructions)  →  bundle (JSON + assets)  →  renderers
+Playwright reporter (adapter)  →  core (test events → QA Instructions)  →  bundle (JSON + assets)  →  renderers  →  QA Report
 ```
 
 - The core is runner-independent: it accepts a neutral stream of test events and knows nothing about Playwright or Jest.
-- The Playwright reporter is a thin adapter that translates reporter steps into those events.
-- Renderers are pure: bundle in, output out. One shared view model walks the bundle once, and the text, Markdown, and HTML renderers each format that view, so they cannot drift apart. The reporter and the CLI share one `BundleRenderer` that supplies screenshot bytes or links; adding an output format touches only a renderer.
+- The Playwright reporter is a thin adapter that translates reporter steps into those events and hands each test's result to the core's `QaReport`, which writes the saved data, each test's page and Jira-ready text, and the index.
+- Renderers are pure: bundle in, output out. One shared view model walks the bundle once, and the text, Markdown, and HTML renderers each format that view, so they cannot drift apart. The QA Report and the CLI share one `BundleRenderer` that supplies screenshot bytes or links; adding an output format touches only a renderer.
 
-See [docs/design.md](./docs/design.md), [ADR 0001](./docs/adr/0001-reporter-derived-qa-steps.md), and [ADR 0002](./docs/adr/0002-one-package-with-entry-points.md). Vocabulary is in [CONTEXT.md](./CONTEXT.md).
+See [docs/design.md](./docs/design.md), [ADR 0001](./docs/adr/0001-reporter-derived-qa-steps.md), [ADR 0002](./docs/adr/0002-one-package-with-entry-points.md), and [ADR 0003](./docs/adr/0003-report-follows-host-runner-conventions.md). Vocabulary is in [CONTEXT.md](./CONTEXT.md).
 
 ## Package layout
 
 One published package, `@procyon-creative/qa-instructions` (`packages/qa-instructions`), with an entry point per role:
 
-| Entry point                                    | Source            | Role                                                                             |
-| ---------------------------------------------- | ----------------- | -------------------------------------------------------------------------------- |
-| `@procyon-creative/qa-instructions`            | `src/core/`       | Runner-independent core: test event port, QA Steps, bundle model, I/O, renderers |
-| `@procyon-creative/qa-instructions/playwright` | `src/playwright/` | Playwright reporter (default export); draws Highlights with sharp                |
-| `qa-instructions` command                      | `src/cli/`        | `qa-instructions render`                                                         |
+| Entry point                                    | Source            | Role                                                                                        |
+| ---------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------- |
+| `@procyon-creative/qa-instructions`            | `src/core/`       | Runner-independent core: test event port, QA Steps, bundle model, I/O, renderers, QA Report |
+| `@procyon-creative/qa-instructions/playwright` | `src/playwright/` | Playwright reporter (default export); draws Highlights with sharp                           |
+| `qa-instructions` command                      | `src/cli/`        | `qa-instructions render`                                                                    |
 
 `src/core/` imports nothing from Playwright, sharp, or the folders beside it; ESLint enforces this.
 
@@ -276,7 +289,7 @@ All examples are unmodified Playwright tests with the reporter added to their co
 
 | Example                       | Purpose                                                                                                                                                                                  |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `examples/verification`       | Deterministic e2e: golden bundle and the QA Steps the reporter renders itself, for a test-id flow                                                                                        |
+| `examples/verification`       | Deterministic e2e: golden saved data and the Jira-ready text of the QA Report a run writes, for a test-id flow                                                                           |
 | `examples/derived-steps`      | Role/label locators, helper functions, dropped test plumbing, and Step Screenshot and Highlight pixel probes (sticky header, hamburger menu, animated accordion; 1x and 2x; every style) |
 | `examples/derived-steps-1.56` | The derived-steps tests on Playwright 1.56: same QA Steps as 1.63, screen-recording screenshots with click points marked, missing-trace warning                                          |
 | `examples/basic`              | Optional smoke against playwright.dev                                                                                                                                                    |
@@ -286,5 +299,5 @@ All examples are unmodified Playwright tests with the reporter added to their co
 pnpm verify
 
 # External smoke only
-cd examples/basic && pnpm test && pnpm render
+cd examples/basic && pnpm test   # then open qa-report/index.html
 ```

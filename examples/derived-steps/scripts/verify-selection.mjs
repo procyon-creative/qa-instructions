@@ -9,7 +9,7 @@ import { root } from './goldens.mjs';
 const expected = ['selection--open-the-home-page'];
 
 const actual = (
-  await readdir(path.join(root, 'qa-runs-selection'), { withFileTypes: true })
+  await readdir(path.join(root, 'qa-report-selection'), { withFileTypes: true })
 )
   .filter((entry) => entry.isDirectory())
   .map((entry) => entry.name)

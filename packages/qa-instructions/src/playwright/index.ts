@@ -6,13 +6,11 @@ import type {
   TestResult,
 } from '@playwright/test/reporter';
 import {
-  BundleOutputDir,
-  BundleRenderer,
   HighlightPlanner,
-  InBundleLayout,
   isRenderFormat,
   QaInstructionsRecorder,
   QaInstructionsRun,
+  QaReport,
   SecretMasker,
   StaleBundlePolicy,
   StepScreenshotHighlighter,
@@ -26,6 +24,7 @@ import {
 } from '../core/index.js';
 
 import { AttemptTraces } from './attempt-traces.js';
+import { PlaywrightOutputFolder } from './output-folder.js';
 import { ReporterLog } from './reporter-log.js';
 import { PlaywrightRunCoverage } from './run-coverage.js';
 import { SharpScreenshotAnnotator } from './sharp-screenshot-annotator.js';
@@ -33,8 +32,12 @@ import { PlaywrightStepTranslator } from './step-translator.js';
 import { TraceAdvice } from './trace-advice.js';
 
 export type QaInstructionsReporterOptions = {
-  /** Where QA Instructions bundles are written. Default `qa-runs`. */
-  outputDir?: string;
+  /**
+   * The folder the QA Report is written to, named and resolved like
+   * Playwright's HTML reporter option: relative to the config file.
+   * Default `qa-report`, beside the project's package.json.
+   */
+  outputFolder?: string;
   /**
    * Limit which tests produce QA Instructions, by tag and by test file glob.
    * Default: every test. Unselected tests still run and produce nothing.
@@ -59,30 +62,28 @@ export type QaInstructionsReporterOptions = {
    */
   highlight?: HighlightStyle;
   /**
-   * The rendered QA Instructions written beside each `bundle.json`:
-   * `qa-steps` (Jira text, `qa-steps.txt`), `markdown` (`qa-steps.md`,
-   * linking the bundle's screenshots), `html` (`qa-steps.html`, screenshots
-   * embedded), `json` (`qa-steps.json`). Default `['qa-steps']`.
+   * More formats written into each test's directory of the QA Report, which
+   * always holds its page (`qa-steps.html`) and Jira-ready text
+   * (`qa-steps.txt`): `markdown` (`qa-steps.md`, linking the test's
+   * screenshots), `json` (`qa-steps.json`). Default none.
    */
   formats?: RenderFormat[];
 };
 
-const DEFAULT_FORMATS: RenderFormat[] = ['qa-steps'];
-
 /**
  * Playwright reporter that derives QA Instructions from what each test
- * already does. Add it to `reporter` in playwright.config; tests are not
- * changed. Imports Playwright for types only.
+ * already does and writes them as a QA Report. Add it to `reporter` in
+ * playwright.config; tests are not changed. Imports Playwright for types
+ * only; the QA Report itself is the core's `QaReport`.
  *
  * Nothing it does can fail the test run: every hook catches its own errors
  * and reports them once on stderr, along with any setup advice (such as the
  * trace setting Step Screenshots need).
  */
 export default class QaInstructionsReporter implements Reporter {
-  private readonly output: BundleOutputDir;
+  private readonly folder: PlaywrightOutputFolder;
   private readonly selection: TestSelection;
-  private readonly stalePolicy: StaleBundlePolicy;
-  private readonly renderers: BundleRenderer[];
+  private readonly formats: RenderFormat[];
   private advice = new TraceAdvice();
   private config?: FullConfig;
 
@@ -104,13 +105,9 @@ export default class QaInstructionsReporter implements Reporter {
     private readonly log = new ReporterLog(),
     private readonly coverage = new PlaywrightRunCoverage(),
   ) {
-    this.output = new BundleOutputDir(options.outputDir ?? 'qa-runs');
+    this.folder = new PlaywrightOutputFolder(options.outputFolder);
     this.selection = this.selectionOf(options.select);
-    this.stalePolicy = new StaleBundlePolicy(this.selection);
-    const layout = new InBundleLayout();
-    this.renderers = this.formatsOf(options.formats).map(
-      (format) => new BundleRenderer(format, layout),
-    );
+    this.formats = this.formatsOf(options.formats);
   }
 
   printsToStdio(): boolean {
@@ -145,48 +142,50 @@ export default class QaInstructionsReporter implements Reporter {
   }
 
   /**
-   * Writes one bundle per test once every attempt has been seen, with Step
-   * Screenshots from the trace of the attempt it came from, highlighted.
-   * Then removes stale bundles from earlier runs (see `StaleBundlePolicy`).
+   * Writes the QA Report once every attempt has been seen: each test's
+   * QA Instructions, with Step Screenshots from the trace of the attempt
+   * they came from, highlighted; then removes stale tests from earlier runs
+   * and writes the index.
    */
   async onEnd(result?: FullResult): Promise<void> {
     let results: QaInstructionsResult[] = [];
+    let report: QaReport;
     try {
       results = this.run.results();
+      report = new QaReport(this.folder.resolve(this.config?.configFile), {
+        formats: this.formats,
+        stalePolicy: new StaleBundlePolicy(this.selection),
+      });
     } catch (error) {
       this.log.error('this run', error);
+      return;
     }
     for (const testResult of results) {
       try {
-        await this.write(testResult);
+        await this.write(report, testResult);
       } catch (error) {
         this.log.error(testResult.bundle.meta.title, error);
       }
     }
-    await this.removeStale(results, result);
-  }
-
-  /**
-   * Every directory this run has a result for counts as current, even one
-   * that failed to write, so a write error never costs an earlier bundle.
-   */
-  private async removeStale(
-    results: QaInstructionsResult[],
-    result: FullResult | undefined,
-  ): Promise<void> {
     try {
-      const stale = this.stalePolicy.staleDirs(
-        await this.output.owned(),
+      await report.removeStale(
         new Set(results.map(({ dirName }) => dirName)),
         this.coverage.of(this.config, result),
       );
-      await this.output.remove(stale);
     } catch (error) {
       this.log.error('stale QA Instructions', error);
     }
+    try {
+      await report.writeIndex();
+    } catch (error) {
+      this.log.error('the QA Report index', error);
+    }
   }
 
-  private async write(result: QaInstructionsResult): Promise<void> {
+  private async write(
+    report: QaReport,
+    result: QaInstructionsResult,
+  ): Promise<void> {
     const { source, problem } = await this.traces.screenshots(
       result.start.id,
       result.start.attempt,
@@ -197,11 +196,10 @@ export default class QaInstructionsReporter implements Reporter {
     const { bundle, assets } = await this.highlighter.highlight(
       result.record(source),
     );
-    const dir = await this.output.write(result.dirName, bundle, assets, {
+    await report.writeTest(result.dirName, bundle, assets, {
       file: result.start.file,
       tags: result.start.tags,
     });
-    for (const renderer of this.renderers) await renderer.render(dir);
   }
 
   private warnHighlight(step: string, error: unknown): void {
@@ -223,15 +221,15 @@ export default class QaInstructionsReporter implements Reporter {
     }
   }
 
-  /** Unknown formats are dropped, with one warning, rather than stopping the run. */
+  /** Unknown formats are dropped, with one warning, rather than stopping the run. Duplicates of the always-written formats are harmless. */
   private formatsOf(formats: readonly string[] | undefined): RenderFormat[] {
-    if (formats === undefined) return DEFAULT_FORMATS;
+    if (formats === undefined) return [];
     const list = Array.isArray(formats) ? formats : [];
     const known = list.filter(isRenderFormat);
     if (!Array.isArray(formats) || known.length < list.length) {
       this.log.once(
         'formats',
-        `ignoring unknown "formats" (${String(formats)}); writing ${known.join(', ') || 'no rendered files'}.`,
+        `ignoring unknown "formats" (${String(formats)}); the QA Report adds ${known.join(', ') || 'no other formats'}.`,
       );
     }
     return [...new Set(known)];

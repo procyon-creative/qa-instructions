@@ -8,7 +8,7 @@ import { root } from './goldens.mjs';
 // fails as expected, yielding one bundle per test that ran despite the
 // retries, and none for the skipped tests.
 
-const bundlesDir = path.join(root, 'qa-runs', 'failing');
+const bundlesDir = path.join(root, 'qa-report', 'failing');
 const expectedBundles = 5;
 
 await rm(bundlesDir, { recursive: true, force: true });
@@ -26,7 +26,9 @@ if (run.status !== 1) {
   process.exit(1);
 }
 
-const bundles = await readdir(bundlesDir);
+const bundles = (await readdir(bundlesDir, { withFileTypes: true }))
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name);
 if (bundles.length !== expectedBundles) {
   console.error(
     `run-failing: expected ${expectedBundles} bundles (one per test), got ${bundles.length}: ${bundles.join(', ')}`,
