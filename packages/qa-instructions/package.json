@@ -45,7 +45,7 @@
     "fflate": "^0.8.3",
     "minimatch": "^10.2.6",
     "open": "^10.2.0",
-    "sharp": "^0.35.4"
+    "sharp": "^0.35.5"
   },
   "peerDependencies": {
     "@playwright/test": ">=1.53.0"
