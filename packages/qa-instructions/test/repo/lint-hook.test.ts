@@ -112,6 +112,14 @@ test('the hook rejects a staged .mjs file that Prettier would reject', async () 
   });
 });
 
+test('the hook rejects a staged .ts file that Prettier would reject', async () => {
+  await withHookRepo(async (repo) => {
+    await repo.write('typed.ts', 'export const answer: number   =   42\n');
+    repo.stage('typed.ts');
+    assert.notEqual(repo.runHook().status, 0);
+  });
+});
+
 test('the hook rejects a staged .json file that Prettier would reject', async () => {
   await withHookRepo(async (repo) => {
     await repo.write('data.json', UNFORMATTED_JSON);
