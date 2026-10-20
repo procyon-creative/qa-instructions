@@ -14,6 +14,6 @@
     "@qa-instructions/e2e-kit": "workspace:*",
     "@qa-instructions/fixture-site": "workspace:*",
     "@types/node": "^26.6.2",
-    "sharp": "^0.35.4"
+    "sharp": "^0.35.5"
   }
 }
