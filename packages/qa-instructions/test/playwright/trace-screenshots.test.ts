@@ -704,6 +704,115 @@ test('a later trace without per-action screenshots falls back to the screen reco
   assert.equal(source.check(VISIBLE)?.result, undefined);
 });
 
+/**
+ * Plain `trace: 'on'` on Playwright 1.63 (format 9) and 1.64 (format 10):
+ * no per-action screenshots, so Step Screenshots come from the screen
+ * recording (fixtures/traces/trace-on.spec.ts, the derived-steps sign-in
+ * test on the fixture site, 800×600). Unlike format 8, a call's `before`
+ * event names no page and its `input` event no input snapshot; the call's
+ * DOM snapshots carry its page id and a `phase`.
+ */
+const TRACE_ON = {
+  9: fixture('v9-on.zip'),
+  10: fixture('v10-on.zip'),
+};
+
+const SIGN_IN_STEPS = {
+  OPEN: ActionRef.of(4, 'Navigate'),
+  SIGN_IN_LINK: ActionRef.of(5, 'Click'),
+  FILL: ActionRef.of(6, 'Fill "demo-user"'),
+  SUBMIT: ActionRef.of(7, 'Click'),
+};
+
+/** Each fixture-site page's marker, at (400, 140). */
+const PAGE_MARKERS = {
+  home: { r: 0x00, g: 0x55, b: 0xff },
+  signIn: { r: 0xff, g: 0x88, b: 0x00 },
+  loginFailed: { r: 0xcc, g: 0x00, b: 0x00 },
+};
+
+/** Which page a screen recording frame of the fixture site shows. */
+async function markerPage(screenshot: Screenshot): Promise<string> {
+  const color = await jpegPixel(screenshot, 400, 140);
+  const near = (expected: { r: number; g: number; b: number }) =>
+    Math.max(
+      Math.abs(color.r - expected.r),
+      Math.abs(color.g - expected.g),
+      Math.abs(color.b - expected.b),
+    ) <= 40;
+  return (
+    Object.entries(PAGE_MARKERS).find(([, rgb]) => near(rgb))?.[0] ??
+    `rgb(${color.r},${color.g},${color.b})`
+  );
+}
+
+for (const [version, trace] of Object.entries(TRACE_ON)) {
+  test(`trace format ${version} without per-action screenshots: each Action gets a frame of its own moment, as format 8 picks it`, async () => {
+    const source = await TraceScreenshotSource.open(trace);
+    assert.equal(source.problem, undefined);
+    const shots = async (ref: string) =>
+      Promise.all(
+        (source.capture(ref)?.screenshots ?? []).map(
+          async (s) => `${s.moment} ${await markerPage(s)}`,
+        ),
+      );
+
+    // The home page as loaded: the last frame painted by the navigation's
+    // end (none was painted after it before the click scrolled).
+    assert.deepEqual(await shots(SIGN_IN_STEPS.OPEN), ['after home']);
+    // The link click: no frame painted just before its input shows the page
+    // it met, so the last one painted after it, on the Sign in page.
+    assert.deepEqual(await shots(SIGN_IN_STEPS.SIGN_IN_LINK), ['after signIn']);
+    // The fill, after its end, never a frame from before it marked with the
+    // field's box: as before 1.63, only a click point marks the moment.
+    assert.deepEqual(await shots(SIGN_IN_STEPS.FILL), ['after signIn']);
+    // The submit click, at the moment it was made, on the Sign in page.
+    assert.deepEqual(await shots(SIGN_IN_STEPS.SUBMIT), ['action signIn']);
+  });
+
+  test(`trace format ${version} without per-action screenshots: a result is a frame of the page the Action left`, async () => {
+    // A result is optional (only a frame the DOM snapshots vouch for), but
+    // one given must show the page as the step left it.
+    const source = await TraceScreenshotSource.open(trace);
+    for (const [ref, page] of [
+      [SIGN_IN_STEPS.OPEN, 'home'],
+      [SIGN_IN_STEPS.SIGN_IN_LINK, 'signIn'],
+      [SIGN_IN_STEPS.FILL, 'signIn'],
+      [SIGN_IN_STEPS.SUBMIT, 'loginFailed'],
+    ]) {
+      const result = source.capture(ref)?.result;
+      if (result) assert.equal(await markerPage(result), page, ref);
+    }
+  });
+
+  test(`trace format ${version} without per-action or DOM snapshots: each Action still gets a frame of its own page's moment, or none`, async () => {
+    // Nothing names a call's page or dates its input: every call is taken
+    // to be on the recording's only page, and every frame is from after.
+    const entries = unzipSync(await readFile(trace));
+    for (const name of Object.keys(entries)) {
+      if (!/^\d+-trace\.trace$/.test(name)) continue;
+      entries[name] = strToU8(
+        strFromU8(entries[name])
+          .split('\n')
+          .filter((line) => !line.includes('"type":"frame-snapshot"'))
+          .join('\n'),
+      );
+    }
+    const source = await openEntries(entries);
+    const shots = async (ref: string) =>
+      Promise.all(
+        (source.capture(ref)?.screenshots ?? []).map(
+          async (s) => `${s.moment} ${await markerPage(s)}`,
+        ),
+      );
+    assert.deepEqual(await shots(SIGN_IN_STEPS.OPEN), ['after home']);
+    assert.deepEqual(await shots(SIGN_IN_STEPS.SIGN_IN_LINK), ['after signIn']);
+    // Nothing shows the page had stopped scrolling after the fill.
+    assert.deepEqual(await shots(SIGN_IN_STEPS.FILL), []);
+    assert.deepEqual(await shots(SIGN_IN_STEPS.SUBMIT), ['after loginFailed']);
+  });
+}
+
 /** A frame of a sample trace's screen recording, by its file name. */
 async function recordedFrame(trace: string, file: string): Promise<Buffer> {
   const entries = unzipSync(await readFile(fixture(trace)));

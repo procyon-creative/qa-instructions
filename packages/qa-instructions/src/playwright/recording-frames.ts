@@ -53,11 +53,12 @@ export type RecordedCall = {
 
 /**
  * Chooses the screen recording frame for a call without a per-action
- * screenshot (before Playwright 1.63). The recording is not a clock-driven
- * video: Playwright takes a frame only when the page repaints and it has
- * acknowledged the last one, and a painted frame can predate a change made
- * just before it. So a frame is used for a moment only when its paint time
- * and the page's DOM snapshots show it can picture that moment.
+ * screenshot (before Playwright 1.63, or without `snapshots.screen`). The
+ * recording is not a clock-driven video: Playwright takes a frame only when
+ * the page repaints and it has acknowledged the last one, and a painted
+ * frame can predate a change made just before it. So a frame is used for a
+ * moment only when its paint time and the page's DOM snapshots show it can
+ * picture that moment.
  */
 export class RecordingFrames {
   constructor(

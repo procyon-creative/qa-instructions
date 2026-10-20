@@ -2,7 +2,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { fixtureOrigin } from '@qa-instructions/fixture-site/origin';
-import { PNG } from 'pngjs';
+import sharp from 'sharp';
 
 import {
   GOLDENS,
@@ -155,17 +155,25 @@ async function verifyBundleScreenshots(golden, bundleDirName) {
     if (expected.action !== undefined && action !== expected.action) {
       fail(`${label}: action "${action}", expected "${expected.action}"`);
     }
+    if (!step.assetIds?.length && expected.optional) continue;
     if (step.assetIds?.length !== 1) {
       fail(`${label}: expected one Step Screenshot, got ${step.assetIds}`);
       continue;
     }
+    // `byMoment` gives probes for each moment the screenshot may be taken
+    // at, when that depends on the screen recording's timing.
+    const probes = expected.byMoment
+      ? expected.byMoment[step.screenshotMoment]
+      : expected.probes;
     if (
-      expected.moment !== undefined &&
-      step.screenshotMoment !== expected.moment
+      (expected.moment !== undefined &&
+        step.screenshotMoment !== expected.moment) ||
+      !probes
     ) {
       fail(
-        `${label}: screenshot taken ${step.screenshotMoment}, expected ${expected.moment}`,
+        `${label}: screenshot taken ${step.screenshotMoment}, expected ${expected.moment ?? Object.keys(expected.byMoment).join(' or ')}`,
       );
+      continue;
     }
 
     const asset = bundle.assets[step.assetIds[0]];
@@ -176,7 +184,7 @@ async function verifyBundleScreenshots(golden, bundleDirName) {
       fail(`${label}: missing screenshot ${asset?.filename}: ${error.message}`);
       continue;
     }
-    probeImage(label, golden, step, data, expected.probes);
+    await probeImage(label, golden, step, data, probes);
 
     if (golden.resultsListed) {
       await verifyResultScreenshot(
@@ -226,24 +234,36 @@ async function verifyResultScreenshot(
     );
     return;
   }
-  probeImage(`${label} result`, golden, step, data, expected.result.probes);
+  await probeImage(
+    `${label} result`,
+    golden,
+    step,
+    data,
+    expected.result.probes,
+  );
 }
 
-/** Checks a screenshot's size and samples its probes. */
-function probeImage(label, golden, step, data, probes) {
+/**
+ * Checks a screenshot's size and samples its probes. A screen recording
+ * frame (JPEG) drifts in color, so its probes allow `tolerance` per channel.
+ */
+async function probeImage(label, golden, step, data, probes) {
   if (data.length < golden.minBytes) {
     fail(`${label}: screenshot is only ${data.length} bytes`);
   }
 
   // A high-DPI screenshot may be a whole multiple of the viewport.
-  const png = PNG.sync.read(data);
-  const scale = png.width / golden.viewport.width;
+  const { data: pixels, info } = await sharp(data)
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const scale = info.width / golden.viewport.width;
   if (
     !Number.isInteger(scale) ||
-    png.height !== golden.viewport.height * scale
+    info.height !== golden.viewport.height * scale
   ) {
-    fail(`${label}: screenshot is ${png.width}x${png.height}`);
+    fail(`${label}: screenshot is ${info.width}x${info.height}`);
   }
+  const tolerance = golden.tolerance ?? TOLERANCE;
 
   for (const probe of probes) {
     const point = probePoint(probe, step, scale);
@@ -251,9 +271,9 @@ function probeImage(label, golden, step, data, probes) {
       fail(`${label}: no element box or click point for probe "${probe.name}"`);
       continue;
     }
-    const idx = (png.width * point.y + point.x) * 4;
-    const actual = [png.data[idx], png.data[idx + 1], png.data[idx + 2]];
-    if (actual.some((c, k) => Math.abs(c - probe.rgb[k]) > TOLERANCE)) {
+    const idx = (info.width * point.y + point.x) * info.channels;
+    const actual = [pixels[idx], pixels[idx + 1], pixels[idx + 2]];
+    if (actual.some((c, k) => Math.abs(c - probe.rgb[k]) > tolerance)) {
       fail(
         `${label}: probe "${probe.name}" at (${point.x},${point.y}) expected rgb(${probe.rgb}) got rgb(${actual})`,
       );

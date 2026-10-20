@@ -2,7 +2,8 @@
 const HIGHLIGHT_STYLES = ['outline', 'clickDot', 'badge', 'spotlight', 'none'];
 
 /**
- * Runs of the derived-steps tests with other reporter options, by name. A
+ * Runs of the derived-steps tests with other reporter options (or, with
+ * `use`, other Playwright options), by name. A
  * run writes one QA Report, in `qa-report/` inside its Playwright
  * `outputDir`, so each variant is its own run with `outputDir`
  * `test-results/<name>/` (playwright.variants.config.ts), and its QA Report
@@ -27,6 +28,12 @@ export const VARIANTS = {
         overrides: [{ match: 'Click the Sign in link', screenshots: 'both' }],
       },
     },
+  },
+  // Plain `trace: 'on'`, without per-action screenshots: Step Screenshots
+  // come from the trace's screen recording, as before 1.63.
+  'trace-on': {
+    testMatch: 'sign-in.spec.ts',
+    use: { trace: 'on' },
   },
   ...Object.fromEntries(
     HIGHLIGHT_STYLES.map((highlight) => [
