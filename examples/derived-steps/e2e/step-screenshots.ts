@@ -20,12 +20,6 @@ import {
 } from './screenshot-specs.ts';
 
 /**
- * pixelmatch's `threshold` for a per-channel margin: its YIQ distance for a
- * shift of the same size in every channel is at most about 0.004 per level.
- */
-const THRESHOLD_PER_LEVEL = 0.004;
-
-/**
  * One test's Step and Result Screenshots against the expectations of a
  * `golden/*.screenshots.json`: one screenshot per QA Step, taken at the
  * expected moment, carrying the Highlight marks it should, and whose probe
@@ -179,11 +173,11 @@ export class StepScreenshots {
       return point!;
     });
     if (points.length === 0) return;
-    const sheet = await ProbeSheet.png(data, points, scale);
+    const sheet = await ProbeSheet.png(data, points);
     expect(sheet, label).toMatchSnapshot(
       ['screenshots', ...this.bundleDirName.split('/'), `${name}.png`],
       {
-        threshold: THRESHOLD_PER_LEVEL * (this.spec.tolerance ?? TOLERANCE),
+        threshold: ProbeSheet.threshold(this.spec.tolerance ?? TOLERANCE),
         maxDiffPixels: 0,
       },
     );
