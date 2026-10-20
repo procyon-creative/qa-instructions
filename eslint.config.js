@@ -61,6 +61,8 @@ export default tseslint.config(
       '**/dist-test/**',
       '**/node_modules/**',
       '**/.astro/**',
+      // The Pages site is its own npm project (docs-site/), not linted here.
+      'docs-site/**',
       'examples/**/scripts/**',
     ],
   },

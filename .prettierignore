@@ -10,3 +10,7 @@ pnpm-lock.yaml
 CHANGELOG.md
 # Golden files are exact renderer output.
 **/golden/
+
+# The GitHub Pages site is its own npm project (not a pnpm workspace
+# package), with its own lockfile and Astro sources.
+docs-site/

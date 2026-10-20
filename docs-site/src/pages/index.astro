@@ -1,0 +1,175 @@
+---
+import "../styles/global.css";
+import LandingLayout from "@procyon-creative/astro-theme/layouts/LandingLayout.astro";
+import Hero from "@procyon-creative/astro-theme/components/Hero.astro";
+import InstallBlock from "@procyon-creative/astro-theme/components/InstallBlock.astro";
+import VersionAside from "@procyon-creative/astro-theme/components/VersionAside.astro";
+import Section from "@procyon-creative/astro-theme/components/Section.astro";
+import FeatureCards from "@procyon-creative/astro-theme/components/FeatureCards.astro";
+import FeatureCard from "@procyon-creative/astro-theme/components/FeatureCard.astro";
+import StructPanel from "@procyon-creative/astro-theme/components/StructPanel.astro";
+import LinkCards from "@procyon-creative/astro-theme/components/LinkCards.astro";
+import LinkCard from "@procyon-creative/astro-theme/components/LinkCard.astro";
+import Footer from "@procyon-creative/astro-theme/components/Footer.astro";
+
+const repo = "https://github.com/procyon-creative/qa-instructions";
+
+const installParts = [
+  { type: "prompt" as const, text: "$" },
+  { type: "pkg" as const, text: "npm install" },
+  { type: "flag" as const, text: " -D" },
+  { type: "arg" as const, text: " @procyon-creative/qa-instructions" },
+];
+const installCmd = "npm install -D @procyon-creative/qa-instructions";
+
+// Reporter setup, as in the README's Setup section.
+const configSnippet = `<span class="dim">// playwright.config.ts</span>
+<span class="tag-cy">import</span> { defineConfig } <span class="tag-cy">from</span> <span class="tag-mg">'@playwright/test'</span>;
+
+<span class="tag-cy">export default</span> <span class="tag-yl">defineConfig</span>({
+  reporter: [
+    [<span class="tag-mg">'list'</span>],
+    [<span class="tag-mg">'@procyon-creative/qa-instructions/playwright'</span>],
+  ],
+  use: {
+    <span class="dim">// Playwright 1.63+:</span>
+    trace: { mode: <span class="tag-mg">'on'</span>, snapshots: { screen: <span class="tag-cy">true</span>, dom: <span class="tag-cy">true</span> } },
+    <span class="dim">// Playwright 1.53–1.62: trace: 'on',</span>
+  },
+});
+`;
+---
+
+<LandingLayout
+  title="QA Instructions: steps a person can follow, from your Playwright tests"
+  description="Turns what your existing Playwright tests already do into QA Instructions: steps a person can follow by hand, with a screenshot for each step. Tests are not changed."
+  ogUrl="https://procyon-creative.github.io/qa-instructions/"
+  favicon={`${import.meta.env.BASE_URL}/procyon-icon.svg`}
+  pkg="qa-instructions"
+  nav={[
+    { label: "What", href: "#what" },
+    { label: "Setup", href: "#setup" },
+    { label: "Links", href: "#links" },
+  ]}
+>
+  <Hero eyebrow="Playwright · Reporter · QA Instructions">
+    <h1
+      slot="headline"
+      class="font-display font-black uppercase text-[clamp(40px,6.5vw,88px)] leading-[1.02] m-0 text-ink"
+      style="letter-spacing: 0.005em;"
+    >
+      Tests become<br />steps a person<br />
+      <span class="bg-gradient-to-r from-neon-cyan via-neon-magenta to-neon-yellow bg-clip-text text-transparent">
+        can follow.
+      </span>
+    </h1>
+
+    <p
+      slot="lede"
+      class="font-sans text-[clamp(17px,1.7vw,21px)] leading-[1.5] max-w-[720px] mt-7 text-ink-soft"
+    >
+      Derives QA Instructions from the Playwright tests you already have. With one trace setting, each QA Step comes with a screenshot of the page. Your tests are not changed.
+    </p>
+
+    <InstallBlock slot="install" command={installCmd} parts={installParts} />
+
+    <Fragment slot="meta">
+      <span class="badge">ISC</span>
+      <span class="badge">Playwright ≥ 1.53</span>
+      <span class="badge">Node ≥ 18</span>
+    </Fragment>
+
+    <VersionAside slot="aside" version="v4.0.0">
+      Published to npm as <a href="https://www.npmjs.com/package/@procyon-creative/qa-instructions" class="text-neon-cyan underline underline-offset-2">@procyon-creative/qa-instructions</a>.<br />
+      <a href={`${repo}/releases`} class="text-neon-cyan underline underline-offset-2">Releases →</a>
+    </VersionAside>
+  </Hero>
+
+  <Section id="what" num="01 / What you get">
+    <Fragment slot="title">
+      Instructions from tests you <span class="bg-gradient-to-r from-neon-cyan to-neon-magenta bg-clip-text text-transparent">already wrote</span>.
+    </Fragment>
+
+    <FeatureCards>
+      <FeatureCard num="01" title="QA Instructions">
+        Each test's browser Actions become numbered QA Steps, and the checks that follow an Action become its Expected Result. Waits, scripts, and value reads are left out because a tester cannot repeat them.
+      </FeatureCard>
+      <FeatureCard num="02" title="Step Screenshots">
+        Every QA Step gets a screenshot of the page at the moment of its Action, with a Highlight on the element acted on. Passwords are masked, and you can mask more.
+      </FeatureCard>
+      <FeatureCard num="03" title="A QA Report every run">
+        A run leaves a browsable QA Report in Playwright's output folder, with no second command. Each test's QA Instructions are also written as Jira-ready text. The pages work offline.
+      </FeatureCard>
+    </FeatureCards>
+  </Section>
+
+  <Section id="setup" num="02 / Setup">
+    <Fragment slot="title">
+      Add the reporter, then <span class="bg-gradient-to-r from-neon-cyan to-neon-magenta bg-clip-text text-transparent">run your tests</span>.
+    </Fragment>
+
+    <StructPanel>
+      <Fragment slot="left-label">What a run leaves behind</Fragment>
+      <pre slot="left"><span class="tag-yl">test-results/qa-report/</span>
+<span class="dim">├─</span> index.html              <span class="dim">every test, its status, links</span>
+<span class="dim">└─</span> <span class="tag-cy">&lt;file&gt;--&lt;test title&gt;/</span>
+   <span class="dim">├─</span> qa-steps.html        <span class="dim">screenshots embedded</span>
+   <span class="dim">├─</span> qa-steps.txt         <span class="dim">Jira-ready text</span>
+   <span class="dim">└─</span> bundle.json, assets/ <span class="dim">saved data</span>
+
+<span class="dim">$</span> <span class="tag-mg">npx qa-instructions show-report</span>
+</pre>
+
+      <Fragment slot="right-label">playwright.config.ts</Fragment>
+      <pre slot="right" set:html={configSnippet}></pre>
+    </StructPanel>
+  </Section>
+
+  <Section id="links" num="03 / Where to go next">
+    <Fragment slot="title">
+      Pick a <span class="bg-gradient-to-r from-neon-cyan to-neon-magenta bg-clip-text text-transparent">direction</span>.
+    </Fragment>
+
+    <LinkCards>
+      <LinkCard
+        href={`${repo}#readme`}
+        which="01 · Docs"
+        name="README"
+        arrow="reporter options →"
+      />
+      <LinkCard
+        href="https://www.npmjs.com/package/@procyon-creative/qa-instructions"
+        which="02 · Package"
+        name="npm"
+        arrow="npmjs.com →"
+      />
+      <LinkCard
+        href={repo}
+        which="03 · Source"
+        name="GitHub"
+        arrow="github.com →"
+      />
+    </LinkCards>
+  </Section>
+
+  <Footer
+    copyright="© Procyon Creative"
+    issuesUrl={`${repo}/issues`}
+  />
+</LandingLayout>
+
+<style is:global>
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .badge::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    background: var(--color-neon-cyan);
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(108, 243, 251, 0.5);
+  }
+</style>
