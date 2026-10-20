@@ -2,7 +2,12 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { expect } from '@playwright/test';
-import { ProbeSheet, Rgb } from '@qa-instructions/e2e-kit';
+import {
+  ProbeSheet,
+  Rgb,
+  type Bundle,
+  type BundleStep,
+} from '@qa-instructions/e2e-kit';
 import { fixtureOrigin } from '@qa-instructions/fixture-site/origin';
 
 import { ProbePoints, type ProbeSpec } from './probe-points.ts';
@@ -10,8 +15,6 @@ import {
   TOLERANCE,
   bundleDirOf,
   readBundle,
-  type Bundle,
-  type BundleStep,
   type ScreenshotSpec,
   type StepSpec,
 } from './screenshot-specs.ts';

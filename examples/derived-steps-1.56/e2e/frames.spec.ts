@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
-import { Rgb, type RgbColor } from '@qa-instructions/e2e-kit';
+import { Rgb, type BundleStep, type RgbColor } from '@qa-instructions/e2e-kit';
 
-import { GOLDENS, SavedTest, colorAt, type Bundle } from './shared.ts';
+import { GOLDENS, SavedTest, colorAt } from './shared.ts';
 
 // Every QA Step has a Step Screenshot from the trace's screen recording (a
 // JPEG frame). A click whose frame shows the moment it was made (moment
@@ -26,10 +26,7 @@ const GIFT_CARDS = 'long-page--order-gift-cards-on-a-smoothly-scrolling-page';
  * (every earlier frame may show the field before it was typed into), and
  * the check of an already checked option (Playwright never scrolls to it).
  */
-function mayLackScreenshot(
-  name: string,
-  step: Bundle['steps'][number],
-): boolean {
+function mayLackScreenshot(name: string, step: BundleStep): boolean {
   return (
     step.action.startsWith('Type ') || (name === GIFT_CARDS && step.index === 2)
   );

@@ -1,7 +1,7 @@
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 
-import { RunLog, Rgb, type Point } from '@qa-instructions/e2e-kit';
+import { RunLog, Rgb, type Bundle, type Point } from '@qa-instructions/e2e-kit';
 
 import { derivedSteps, root } from '../scripts/spec-sync.ts';
 
@@ -39,19 +39,6 @@ export const GOLDENS = [
 /** The 1.63 golden of a test's Jira text. */
 export function goldenText(name: string): Promise<string> {
   return readFile(path.join(derivedSteps, 'golden', `${name}.txt`), 'utf8');
-}
-
-export interface Bundle {
-  steps: {
-    index: number;
-    action: string;
-    assetIds?: string[];
-    resultAssetId?: string;
-    screenshotMoment?: string;
-    clickPoint?: Point;
-    viewport?: { width: number; height: number };
-  }[];
-  assets: Record<string, { filename: string; highlight?: string[] }>;
 }
 
 /** One test's directory in a QA Report. */

@@ -368,7 +368,7 @@ E2E on `main` runs the verification and derived-steps examples (local fixture si
 pnpm verify
 ```
 
-After an intended change, `pnpm e2e --update-snapshots` in `examples/verification` or `examples/derived-steps` rewrites that example's goldens (the 1.56 example compares with derived-steps' goldens and has none of its own).
+After an intended change, `pnpm e2e --update-snapshots` in `examples/verification` or `examples/derived-steps` rewrites that example's golden files and image snapshots (the `golden/*.screenshots.json` expectations are written by hand and stay as they are; the 1.56 example compares with derived-steps' goldens and has none of its own).
 
 The 1.56 example needs its own browser build once: `cd examples/derived-steps-1.56 && pnpm exec playwright install chromium`. Its `pnpm record-fixtures` re-records the adapter's Playwright 1.56 and 1.63 step and trace fixtures.
 

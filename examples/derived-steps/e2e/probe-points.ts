@@ -1,12 +1,4 @@
-import type { Point } from '@qa-instructions/e2e-kit';
-
-/** A box in viewport CSS pixels. */
-export interface Box {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+import type { Box, Point } from '@qa-instructions/e2e-kit';
 
 /** Where a probe looks: a fixed viewport point, or relative to a step's element or click. */
 export interface ProbeSpec {

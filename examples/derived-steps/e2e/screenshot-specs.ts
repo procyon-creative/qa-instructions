@@ -2,24 +2,10 @@ import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import type { ProbeSpec, StepGeometry } from './probe-points.ts';
+import type { Bundle } from '@qa-instructions/e2e-kit';
+
+import type { ProbeSpec } from './probe-points.ts';
 import { reportOf, root } from './reports.ts';
-
-/** What the checks read of a test's saved data (`bundle.json`). */
-export interface Bundle {
-  meta: { testSite?: string };
-  steps: BundleStep[];
-  assets: Record<string, { filename: string; highlight?: string[] }>;
-}
-
-export interface BundleStep extends StepGeometry {
-  index: number;
-  action: string;
-  url?: string;
-  assetIds?: string[];
-  resultAssetId?: string;
-  screenshotMoment?: string;
-}
 
 /** The expectation for one QA Step's screenshots. */
 export interface StepSpec {
