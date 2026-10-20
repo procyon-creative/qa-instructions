@@ -114,27 +114,73 @@ export class RecordingFrames {
    * if the page is known not to have scrolled from the fill's end until it
    * was painted (see `settledBy`): when nothing logs whether the page is
    * still (the fill is followed by a check, a wait, or nothing), a scroll
-   * still easing in, or not yet recorded, gets none.
+   * still easing in, or not yet recorded, gets none. Either way the frame
+   * must be painted at least PAINT_LAG after the fill's scroll was recorded
+   * (see `afterTyping`).
    */
   afterAction(call: RecordedCall): ScreencastFrame | undefined {
-    const { pageId, nextChange, settledAt } = call;
+    const { pageId, nextChange } = call;
     const end = call.endTime ?? call.startTime;
     if (end === undefined) return undefined;
     const typed = call.inputSnapshot !== undefined && !call.marks;
-    if (typed && settledAt !== undefined) {
-      return this.screencast.lastPaintedBetween(
-        pageId,
-        Math.max(end, settledAt + PAINT_LAG),
-        nextChange,
-      );
-    }
-    const after = this.screencast.lastPaintedBetween(pageId, end, nextChange);
-    if (after) return !typed || this.settledBy(call, after) ? after : undefined;
-    if (typed && call.changedPage) return undefined;
+    if (typed) return this.afterTyping(call, end);
+    return (
+      this.screencast.lastPaintedBetween(pageId, end, nextChange) ??
+      this.byEnd(pageId, end)
+    );
+  }
+
+  /** The last frame painted by the call's end, else the page's first. */
+  private byEnd(
+    pageId: string | undefined,
+    end: number,
+  ): ScreencastFrame | undefined {
     return (
       this.screencast.lastPaintedBy(pageId, end) ??
       this.screencast.first(pageId)
     );
+  }
+
+  /**
+   * `afterAction` for a call that sent input to an element with no point to
+   * mark (a fill). Its frame must be painted at least PAINT_LAG after the
+   * page's DOM snapshots first recorded the scroll offsets the fill left,
+   * since a frame painted sooner may still show the page before the fill's
+   * focus scrolled it; and at least PAINT_LAG after the page, seen moving
+   * after the fill, was found still.
+   */
+  private afterTyping(
+    call: RecordedCall,
+    end: number,
+  ): ScreencastFrame | undefined {
+    const { pageId, nextChange, settledAt } = call;
+    const anyAfter = this.screencast.lastPaintedBetween(
+      pageId,
+      end,
+      nextChange,
+    );
+    if (settledAt === undefined && !anyAfter) {
+      return call.changedPage ? undefined : this.byEnd(pageId, end);
+    }
+    const scrollRecordedAt =
+      call.afterSnapshot === undefined
+        ? undefined
+        : this.pages.scrollSince(pageId, call.afterSnapshot);
+    const earliestPaint = Math.max(
+      end,
+      ...[settledAt, scrollRecordedAt]
+        .filter((time) => time !== undefined)
+        .map((time) => time + PAINT_LAG),
+    );
+    const frame = this.screencast.lastPaintedBetween(
+      pageId,
+      earliestPaint,
+      nextChange,
+    );
+    if (!frame) return undefined;
+    return settledAt !== undefined || this.settledBy(call, frame)
+      ? frame
+      : undefined;
   }
 
   /**

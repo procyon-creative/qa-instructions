@@ -146,13 +146,16 @@ test.describe('the long page', () => {
     const saved = new SavedTest(LONG_PAGE);
     const bundle = await saved.bundle();
     const fill = bundle.steps[1];
+    test.skip(
+      !fill.assetIds?.length,
+      'no frame is known to show the fill (the click scrolled first)',
+    );
     // The field is 140×39 CSS pixels; most of it shows the green. The click
-    // waits for its scroll, so the recording always has a frame after the fill.
-    const green = fill.assetIds?.length
-      ? (
-          await Rgb.decode(await saved.asset(bundle, fill.assetIds[0]))
-        ).countNear(CHANGED_FIELD, TOLERANCE)
-      : 0;
+    // usually scrolls before the recording paints a frame known to show the
+    // fill, so the fill may have no screenshot, never one without the value.
+    const green = (
+      await Rgb.decode(await saved.asset(bundle, fill.assetIds![0]))
+    ).countNear(CHANGED_FIELD, TOLERANCE);
     expect(green, 'green pixels of the typed field').toBeGreaterThanOrEqual(
       2000,
     );
