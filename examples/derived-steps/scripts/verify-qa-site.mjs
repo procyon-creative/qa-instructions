@@ -41,13 +41,7 @@ try {
   const retarget = 'https://another.example.com';
   const render = spawnSync(
     process.execPath,
-    [
-      cli,
-      'render',
-      path.join(copy, 'qa-report'),
-      '--qa-site',
-      retarget,
-    ],
+    [cli, 'render', path.join(copy, 'qa-report'), '--qa-site', retarget],
     { cwd: root, encoding: 'utf8' },
   );
   assert.equal(render.status, 0, render.stderr || render.stdout);
