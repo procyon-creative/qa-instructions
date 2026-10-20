@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { cp, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { fixtureOrigin } from '@qa-instructions/fixture-site/origin';
 
@@ -23,15 +24,25 @@ assert.equal(bundle.meta.testSite, fixtureOrigin.url);
 assert.equal(bundle.steps[0].action, `Open ${fixtureOrigin.url}/`);
 assert.equal(bundle.steps[0].url, `${fixtureOrigin.url}/`);
 
+// The built command, found from the package's own entry point: CI installs
+// before building, so pnpm has no `qa-instructions` bin link to run.
+const cli = path.join(
+  path.dirname(
+    fileURLToPath(import.meta.resolve('@procyon-creative/qa-instructions')),
+  ),
+  '..',
+  'cli',
+  'index.js',
+);
+
 const copy = await mkdtemp(path.join(tmpdir(), 'qa-site-render-'));
 try {
   await cp(folder, path.join(copy, 'qa-report'), { recursive: true });
   const retarget = 'https://another.example.com';
   const render = spawnSync(
-    'pnpm',
+    process.execPath,
     [
-      'exec',
-      'qa-instructions',
+      cli,
       'render',
       path.join(copy, 'qa-report'),
       '--qa-site',
