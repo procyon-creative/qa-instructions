@@ -116,3 +116,50 @@ test('render fails on a folder with no saved test data', async () => {
     );
   });
 });
+
+test('render --qa-site retargets the saved QA Report without changing its saved data', async () => {
+  const saved: QaRunBundle = {
+    ...BUNDLE,
+    meta: { ...BUNDLE.meta, testSite: 'https://shop.lndo.site' },
+    steps: [
+      {
+        index: 1,
+        action: 'Open https://shop.lndo.site/cart',
+        url: 'https://shop.lndo.site/cart',
+      },
+    ],
+  };
+  const cwd = await mkdtemp(path.join(tmpdir(), 'qa-render-'));
+  try {
+    const folder = path.join(cwd, 'qa-report');
+    await new QaReport(folder).writeTest(TEST, saved, [], {});
+
+    await command(cwd).render.run([
+      'qa-report',
+      '--qa-site',
+      'https://multidev.example.com',
+    ]);
+
+    assert.equal(
+      await readFile(path.join(folder, TEST, 'qa-steps.txt'), 'utf8'),
+      '1. Open https://multidev.example.com/cart\n',
+    );
+    assert.deepEqual(
+      JSON.parse(
+        await readFile(path.join(folder, TEST, 'bundle.json'), 'utf8'),
+      ),
+      saved,
+    );
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test('render --qa-site rejects an address that is not absolute http(s)', async () => {
+  await withSavedReport(async (cwd) => {
+    await assert.rejects(
+      command(cwd).render.run(['qa-report', '--qa-site', 'multidev']),
+      /QA Site/,
+    );
+  });
+});

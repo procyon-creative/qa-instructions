@@ -6,6 +6,7 @@ import test from 'node:test';
 
 import {
   QaReport,
+  QaSite,
   renderHtml,
   renderQaSteps,
   EmbeddedImages,
@@ -202,5 +203,60 @@ test('an empty run still writes the index', async () => {
       'utf8',
     );
     assert.match(html, /No test produced QA Instructions/);
+  });
+});
+
+const ON_TEST_SITE: QaRunBundle = {
+  ...COMPLETE,
+  meta: { ...COMPLETE.meta, testSite: 'https://shop.lndo.site' },
+  steps: [
+    {
+      index: 1,
+      action: 'Open https://shop.lndo.site/cart',
+      url: 'https://shop.lndo.site/cart',
+    },
+  ],
+};
+
+test('a QA Site retargets the page and Jira text but not the saved data', async () => {
+  await withFolder(async (folder) => {
+    const qaSite = QaSite.parse('https://qa.example.com');
+    await new QaReport(folder, { qaSite }).writeTest(
+      'home--open',
+      ON_TEST_SITE,
+      [],
+      owner,
+    );
+
+    const dir = path.join(folder, 'home--open');
+    assert.deepEqual(
+      JSON.parse(await readFile(path.join(dir, 'bundle.json'), 'utf8')),
+      ON_TEST_SITE,
+    );
+    assert.equal(
+      await readFile(path.join(dir, 'qa-steps.txt'), 'utf8'),
+      '1. Open https://qa.example.com/cart\n',
+    );
+    assert.match(
+      await readFile(path.join(dir, 'qa-steps.html'), 'utf8'),
+      /<a href="https:\/\/qa\.example\.com\/cart">/,
+    );
+  });
+});
+
+test('render retargets an existing QA Report for a different QA Site', async () => {
+  await withFolder(async (folder) => {
+    await new QaReport(folder, {
+      qaSite: QaSite.parse('https://old.example.com'),
+    }).writeTest('home--open', ON_TEST_SITE, [], owner);
+
+    await new QaReport(folder, {
+      qaSite: QaSite.parse('https://new.example.com'),
+    }).render();
+
+    assert.equal(
+      await readFile(path.join(folder, 'home--open', 'qa-steps.txt'), 'utf8'),
+      '1. Open https://new.example.com/cart\n',
+    );
   });
 });

@@ -7,6 +7,7 @@ import {
   RelativeImageLinks,
   render,
   type RenderFormat,
+  type QaSite,
   type StepImages,
 } from '../render/index.js';
 import { ASSETS_DIR, readBundle, readBundleAssets } from './io.js';
@@ -99,6 +100,8 @@ export class BundleRenderer {
   constructor(
     private readonly format: RenderFormat,
     private readonly layout: RenderLayout,
+    /** Points Test Site addresses at the QA Site the tester uses. */
+    private readonly qaSite?: QaSite,
   ) {}
 
   async renderAll(bundleDirs: string[]): Promise<void> {
@@ -111,7 +114,11 @@ export class BundleRenderer {
     const images = await this.images(bundleDir, bundle);
     const file = this.layout.file(bundleDir, EXTENSIONS[this.format]);
     await mkdir(path.dirname(file), { recursive: true });
-    await writeFile(file, render(bundle, this.format, { images }), 'utf8');
+    await writeFile(
+      file,
+      render(bundle, this.format, { images, qaSite: this.qaSite }),
+      'utf8',
+    );
     return file;
   }
 

@@ -44,6 +44,8 @@ type Attempt = {
   retry?: number;
   steps: StepSpec[];
   attachments?: TestResult['attachments'];
+  /** The project's baseURL; `null` for a project with none. */
+  baseURL?: string | null;
 };
 
 function step(spec: StepSpec): TestStep {
@@ -53,7 +55,10 @@ function step(spec: StepSpec): TestStep {
   } as unknown as TestStep;
 }
 
-function mockTestCase(tags: string[] = []): TestCase {
+function mockTestCase(
+  tags: string[] = [],
+  baseURL: string | null = 'http://127.0.0.1:4321',
+): TestCase {
   return {
     id: 'test-1',
     title: 'Sign in with bad credentials',
@@ -62,7 +67,7 @@ function mockTestCase(tags: string[] = []): TestCase {
     parent: {
       project: () => ({
         name: 'chromium',
-        use: { baseURL: 'http://127.0.0.1:4321' },
+        use: baseURL === null ? {} : { baseURL },
       }),
     },
   } as unknown as TestCase;
@@ -123,8 +128,9 @@ async function runAttempts(
       retry = 0,
       steps,
       attachments = [],
+      baseURL,
     } of attempts) {
-      await reporter.onTestEnd(mockTestCase(), {
+      await reporter.onTestEnd(mockTestCase([], baseURL), {
         status,
         retry,
         attachments,
@@ -1493,4 +1499,109 @@ test('with no QA Report written, exit prints and opens nothing', async () => {
     console.warn = warn;
   }
   assert.deepEqual(opening, { opened: [], printed: [] });
+});
+
+/** Runs `body` with `QA_SITE` set (or unset) and console warnings collected. */
+async function withQaSiteEnv<T>(
+  qaSite: string | undefined,
+  body: (warnings: string[]) => Promise<T>,
+): Promise<T> {
+  const warnings: string[] = [];
+  const warn = console.warn;
+  const saved = process.env.QA_SITE;
+  console.warn = (message: unknown) => warnings.push(String(message));
+  if (qaSite === undefined) delete process.env.QA_SITE;
+  else process.env.QA_SITE = qaSite;
+  try {
+    return await body(warnings);
+  } finally {
+    console.warn = warn;
+    if (saved === undefined) delete process.env.QA_SITE;
+    else process.env.QA_SITE = saved;
+  }
+}
+
+test('the qaSite option points Test Site addresses at the QA Site', async () => {
+  await withQaSiteEnv(undefined, async (warnings) => {
+    const { rendered, bundle } = await runAttempts([{ steps: [navigate] }], {
+      qaSite: 'https://qa.example.com',
+    });
+    assert.equal(
+      rendered.get('qa-steps.txt'),
+      '1. Open https://qa.example.com/\n',
+    );
+    assert.equal(bundle.steps[0].action, 'Open http://127.0.0.1:4321/');
+    assert.equal(bundle.meta.testSite, 'http://127.0.0.1:4321');
+    assert.deepEqual(
+      warnings.filter((w) => /QA Site|qaSite/.test(w)),
+      [],
+    );
+  });
+});
+
+test('QA_SITE overrides the qaSite option for a run', async () => {
+  await withQaSiteEnv('https://multidev.example.com', async () => {
+    const { rendered } = await runAttempts([{ steps: [navigate] }], {
+      qaSite: 'https://qa.example.com',
+    });
+    assert.equal(
+      rendered.get('qa-steps.txt'),
+      '1. Open https://multidev.example.com/\n',
+    );
+  });
+});
+
+test('an unusable qaSite is ignored with one warning', async () => {
+  await withQaSiteEnv(undefined, async (warnings) => {
+    const { rendered } = await runAttempts(
+      [{ steps: [navigate] }, { steps: [navigate], retry: 1 }],
+      { qaSite: 'qa.example.com' },
+    );
+    assert.equal(
+      rendered.get('qa-steps.txt'),
+      '1. Open http://127.0.0.1:4321/\n',
+    );
+    assert.equal(warnings.filter((w) => /qaSite/.test(w)).length, 1);
+  });
+});
+
+test('an unusable QA_SITE is ignored with one warning, keeping the qaSite option', async () => {
+  await withQaSiteEnv('not an address', async (warnings) => {
+    const { rendered } = await runAttempts([{ steps: [navigate] }], {
+      qaSite: 'https://qa.example.com',
+    });
+    assert.equal(
+      rendered.get('qa-steps.txt'),
+      '1. Open https://qa.example.com/\n',
+    );
+    assert.equal(warnings.filter((w) => /QA_SITE/.test(w)).length, 1);
+  });
+});
+
+test('a QA Site with no detectable Test Site warns once and rewrites nothing', async () => {
+  await withQaSiteEnv(undefined, async (warnings) => {
+    const { rendered, bundle } = await runAttempts(
+      [
+        { steps: [navigate], baseURL: null },
+        { steps: [navigate], baseURL: null, retry: 1 },
+      ],
+      { qaSite: 'https://qa.example.com' },
+    );
+    assert.equal(bundle.meta.testSite, undefined);
+    assert.equal(rendered.get('qa-steps.txt'), '1. Open /\n');
+    assert.equal(warnings.filter((w) => /Test Site/.test(w)).length, 1);
+  });
+});
+
+test('without a QA Site nothing warns and output is as before', async () => {
+  await withQaSiteEnv(undefined, async (warnings) => {
+    const { rendered } = await runAttempts([
+      { steps: [navigate], baseURL: null },
+    ]);
+    assert.equal(rendered.get('qa-steps.txt'), '1. Open /\n');
+    assert.deepEqual(
+      warnings.filter((w) => /QA Site|qaSite/.test(w)),
+      [],
+    );
+  });
 });

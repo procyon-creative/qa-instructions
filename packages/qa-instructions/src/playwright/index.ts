@@ -14,6 +14,7 @@ import {
   QaReport,
   QaReportOpener,
   QaReportViewer,
+  type QaSite,
   ResultScreenshotRule,
   SecretMasker,
   StaleBundlePolicy,
@@ -30,6 +31,7 @@ import {
 
 import { AttemptTraces } from './attempt-traces.js';
 import { openInBrowser } from './browser.js';
+import { QaSiteSetting } from './qa-site-setting.js';
 import { PlaywrightOutputFolder } from './output-folder.js';
 import {
   isQaReportOpen,
@@ -95,6 +97,15 @@ export type QaInstructionsReporterOptions = {
    * the terminal.
    */
   open?: QaReportOpen;
+  /**
+   * The site testers use to follow the QA Instructions, such as a multidev
+   * or dev server, as an absolute http(s) address. Every address on the
+   * site the test ran against (the Test Site) then points here in the
+   * pages and Jira-ready text, keeping its path and query. The `QA_SITE`
+   * environment variable overrides it for one run. Default: addresses are
+   * left as the test used them.
+   */
+  qaSite?: string;
 };
 
 /**
@@ -113,6 +124,7 @@ export default class QaInstructionsReporter implements Reporter {
   private readonly formats: RenderFormat[];
   private readonly resultScreenshots: ResultScreenshotRule;
   private readonly opener: QaReportOpener;
+  private readonly qaSite?: QaSite;
   private advice = new TraceAdvice();
   private config?: FullConfig;
   private suite?: Suite;
@@ -155,6 +167,7 @@ export default class QaInstructionsReporter implements Reporter {
       options.resultScreenshots,
     );
     this.opener = openerFor(this.openOf(options.open));
+    this.qaSite = new QaSiteSetting(this.log).resolve(options.qaSite);
   }
 
   printsToStdio(): boolean {
@@ -204,6 +217,7 @@ export default class QaInstructionsReporter implements Reporter {
       report = new QaReport(this.folder.forRun(this.config, this.suite), {
         formats: this.formats,
         stalePolicy: new StaleBundlePolicy(this.selection),
+        qaSite: this.qaSite,
       });
     } catch (error) {
       this.log.error('this run', error);
@@ -268,10 +282,20 @@ export default class QaInstructionsReporter implements Reporter {
     const { bundle, assets } = await this.highlighter.highlight(
       result.record(source),
     );
+    this.warnOnUnknownTestSite(bundle.meta.testSite);
     await report.writeTest(result.dirName, bundle, assets, {
       file: result.start.file,
       tags: result.start.tags,
     });
+  }
+
+  /** A QA Site needs the Test Site to know which addresses to point at it. */
+  private warnOnUnknownTestSite(testSite: string | undefined): void {
+    if (!this.qaSite || testSite) return;
+    this.log.once(
+      'testSite',
+      'a QA Site is set but no Test Site was found (the project has no baseURL and the test opened no page by full address), so no addresses were changed.',
+    );
   }
 
   private warnHighlight(step: string, error: unknown): void {

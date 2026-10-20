@@ -1,3 +1,6 @@
+/** The QA Site the `qa-site` variant sets, as a tester would see it. */
+export const QA_SITE = 'https://multidev.example.com';
+
 /** One run per Highlight style, for the moving-UI test only. */
 const HIGHLIGHT_STYLES = ['outline', 'clickDot', 'badge', 'spotlight', 'none'];
 
@@ -34,6 +37,12 @@ export const VARIANTS = {
   'trace-on': {
     testMatch: 'sign-in.spec.ts',
     use: { trace: 'on' },
+  },
+  // QA_SITE set for the run: every fixture-site address in the pages and
+  // Jira text points at the QA Site. The saved data keeps the original ones.
+  'qa-site': {
+    testMatch: 'sign-in.spec.ts',
+    env: { QA_SITE: QA_SITE },
   },
   ...Object.fromEntries(
     HIGHLIGHT_STYLES.map((highlight) => [

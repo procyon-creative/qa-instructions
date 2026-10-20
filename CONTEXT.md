@@ -45,6 +45,13 @@ A second screenshot of a QA Step, taken after the Action, showing what its Expec
 The mark drawn on a Step Screenshot to show which element the Action touched and, for clicks, where. Its style is configurable. An Approximate Action's outline is dashed.
 _Avoid_: annotation (overloaded with Playwright test annotations)
 
+**Test Site**:
+The site the test ran against, such as a local Lando or localhost address. Testers usually can't reach it.
+
+**QA Site**:
+The site testers use to follow the QA Instructions, such as a multidev or dev server. When a run names one, every Test Site address in the QA Instructions points at the QA Site instead.
+_Avoid_: target, environment (both overloaded)
+
 ## Example dialogue
 
 > **Dev:** "The checkout test calls `waitForTimeout` and reads the cart's data attributes. Are those QA Steps?"

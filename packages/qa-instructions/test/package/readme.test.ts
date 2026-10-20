@@ -13,6 +13,7 @@ import {
   ResultScreenshotRule,
   STEP_SCREENSHOTS,
 } from '../../src/core/index.js';
+import { QaSiteSetting } from '../../src/playwright/qa-site-setting.js';
 import { PlaywrightOutputFolder } from '../../src/playwright/output-folder.js';
 import {
   QA_REPORT_OPEN_MODES,
@@ -86,6 +87,14 @@ test('README documents the render command with every format', async () => {
   for (const format of RENDER_FORMATS) {
     assert.ok(section.includes(format), `README "Render" omits ${format}`);
   }
+});
+
+test('README documents qaSite, QA_SITE, and render --qa-site', async () => {
+  const options = await readmeSection('Reporter options');
+  assert.ok(options.includes('QA_SITE'));
+  assert.ok(options.includes('meta.testSite'));
+  assert.ok(options.includes(`${QaSiteSetting.ENV}`));
+  assert.ok((await readmeSection('Render')).includes('--qa-site <url>'));
 });
 
 test('README lists every format the formats option takes, and what every test gets anyway', async () => {

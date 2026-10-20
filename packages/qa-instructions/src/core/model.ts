@@ -70,6 +70,11 @@ export type QaRunBundle = {
     };
     capturedAt: string;
     /**
+     * The base address (scheme, host, port) of the site the test ran
+     * against, so a report can point its addresses at a QA Site later.
+     */
+    testSite?: string;
+    /**
      * `incomplete`: derived from a test that did not pass, so the QA Steps
      * stop where it failed, or flag where its soft checks failed.
      */

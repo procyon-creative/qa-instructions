@@ -11,6 +11,7 @@ import type {
 } from '../events.js';
 import type { QaAssetInput, QaRunBundle, QaStepInput } from '../model.js';
 import { InlineMarkup } from '../render/inline-markup.js';
+import { QaSite } from '../render/qa-site.js';
 import {
   ResultScreenshotPicker,
   StepScreenshotPicker,
@@ -171,6 +172,9 @@ export class QaInstructionsRecorder implements TestEventSink {
   private start?: TestStartEvent;
   private end?: TestEndEvent;
   private stopped = false;
+  /** The first absolute page the test opened, for a run with no baseURL. */
+  private firstPageSite?: string;
+  private openedFirstPage = false;
 
   constructor(options: QaInstructionsRecorderOptions = {}) {
     this.phraser = options.phraser ?? new StepPhraser();
@@ -245,6 +249,8 @@ export class QaInstructionsRecorder implements TestEventSink {
         project: this.start.project,
       });
     }
+    const testSite = this.testSite();
+    if (testSite) builder.setTestSite(testSite);
     builder.setStatus(
       !this.end || this.end.status === 'passed' ? 'complete' : 'incomplete',
     );
@@ -403,6 +409,10 @@ export class QaInstructionsRecorder implements TestEventSink {
   }
 
   private onAction(event: ActionEvent): void {
+    if (event.kind === 'navigate' && !this.openedFirstPage) {
+      this.openedFirstPage = true;
+      this.firstPageSite = QaSite.originOf(this.resolveUrl(event.url));
+    }
     if (!this.isUserAction(event)) {
       if (this.scriptChanges.mayChangePage(event)) this.warn(event);
       return;
@@ -530,6 +540,14 @@ export class QaInstructionsRecorder implements TestEventSink {
     event: ActionEvent,
   ): event is ActionEvent & { kind: UserActionKind } {
     return USER_ACTIONS.has(event.kind);
+  }
+
+  /**
+   * The base address of the site the test ran against: the run's baseURL,
+   * else the first page the test opened.
+   */
+  private testSite(): string | undefined {
+    return QaSite.originOf(this.start?.baseUrl) ?? this.firstPageSite;
   }
 
   private resolveUrl(url: string | undefined): string | undefined {

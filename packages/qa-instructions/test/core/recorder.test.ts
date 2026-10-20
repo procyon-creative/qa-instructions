@@ -784,3 +784,50 @@ test('warnings and approximate Actions are marked in Jira-ready text', () => {
       '2. Click the **Subscribe** button (approximate: the test forced this Action past its usual checks, so its highlight may not line up) — **Thanks** is visible\n',
   );
 });
+
+function recordWith(testStart: TestEvent, ...events: TestEvent[]): QaRunBundle {
+  const recorder = new QaInstructionsRecorder();
+  for (const event of [testStart, ...events, passed]) recorder.handle(event);
+  return recorder.toBundle();
+}
+
+const navigate = (url: string): TestEvent => ({
+  type: 'action',
+  kind: 'navigate',
+  url,
+});
+
+test('the Test Site is the base address of the run baseURL', () => {
+  const bundle = recordWith(
+    { ...start, baseUrl: 'https://shop.lndo.site/app/?x=1' },
+    navigate('https://other.example.com/'),
+  );
+  assert.equal(bundle.meta.testSite, 'https://shop.lndo.site');
+});
+
+test('without a baseURL the Test Site is the first page the test opens', () => {
+  const bundle = recordWith(
+    { ...start, baseUrl: undefined },
+    { type: 'action', kind: 'click' },
+    navigate('http://localhost:3000/login?next=%2F'),
+    navigate('https://pay.example.com/checkout'),
+  );
+  assert.equal(bundle.meta.testSite, 'http://localhost:3000');
+});
+
+test('a relative first page and no baseURL leave the Test Site unknown', () => {
+  const bundle = recordWith(
+    { ...start, baseUrl: undefined },
+    navigate('/login'),
+  );
+  assert.equal(bundle.meta.testSite, undefined);
+});
+
+test('only the first page counts: a later full address does not become the Test Site', () => {
+  const bundle = recordWith(
+    { ...start, baseUrl: undefined },
+    navigate('/login'),
+    navigate('https://pay.example.com/checkout'),
+  );
+  assert.equal(bundle.meta.testSite, undefined);
+});

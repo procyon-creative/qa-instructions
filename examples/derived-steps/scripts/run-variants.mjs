@@ -11,7 +11,11 @@ for (const name of Object.keys(VARIANTS)) {
   const run = spawnSync(
     'pnpm',
     ['exec', 'playwright', 'test', '-c', 'playwright.variants.config.ts'],
-    { cwd: root, env: { ...process.env, QA_VARIANT: name }, stdio: 'inherit' },
+    {
+      cwd: root,
+      env: { ...process.env, ...VARIANTS[name].env, QA_VARIANT: name },
+      stdio: 'inherit',
+    },
   );
   if (run.status !== 0) {
     console.error(`run-variants: the ${name} run exited ${run.status}`);
