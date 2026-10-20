@@ -126,6 +126,16 @@ export class RecordingFrames {
     if (typed) return this.afterTyping(call, end);
     return (
       this.screencast.lastPaintedBetween(pageId, end, nextChange) ??
+      this.byEnd(pageId, end)
+    );
+  }
+
+  /** The last frame painted by the call's end, else the page's first. */
+  private byEnd(
+    pageId: string | undefined,
+    end: number,
+  ): ScreencastFrame | undefined {
+    return (
       this.screencast.lastPaintedBy(pageId, end) ??
       this.screencast.first(pageId)
     );
@@ -144,27 +154,29 @@ export class RecordingFrames {
     end: number,
   ): ScreencastFrame | undefined {
     const { pageId, nextChange, settledAt } = call;
-    if (
-      settledAt === undefined &&
-      !this.screencast.lastPaintedBetween(pageId, end, nextChange)
-    ) {
-      if (call.changedPage) return undefined;
-      return (
-        this.screencast.lastPaintedBy(pageId, end) ??
-        this.screencast.first(pageId)
-      );
+    const anyAfter = this.screencast.lastPaintedBetween(
+      pageId,
+      end,
+      nextChange,
+    );
+    if (settledAt === undefined && !anyAfter) {
+      return call.changedPage ? undefined : this.byEnd(pageId, end);
     }
-    const scrolled =
+    const scrollRecordedAt =
       call.afterSnapshot === undefined
         ? undefined
         : this.pages.scrollSince(pageId, call.afterSnapshot);
-    const from = Math.max(
+    const earliestPaint = Math.max(
       end,
-      ...[settledAt, scrolled]
+      ...[settledAt, scrollRecordedAt]
         .filter((time) => time !== undefined)
         .map((time) => time + PAINT_LAG),
     );
-    const frame = this.screencast.lastPaintedBetween(pageId, from, nextChange);
+    const frame = this.screencast.lastPaintedBetween(
+      pageId,
+      earliestPaint,
+      nextChange,
+    );
     if (!frame) return undefined;
     return settledAt !== undefined || this.settledBy(call, frame)
       ? frame

@@ -644,16 +644,23 @@ test('trace format 8: a fill whose only frame was painted within PAINT_LAG of it
   const source = await TraceScreenshotSource.open(
     fixture('v8-scroll-still.zip'),
   );
-  assert.ok(source.capture(V8_BOOTS_FILL));
-  assert.deepEqual(moments(source.capture(V8_BOOTS_FILL)), []);
+  const fill = source.capture(V8_BOOTS_FILL);
+  assert.ok(fill);
+  assert.deepEqual(moments(fill), []);
 });
 
-test('trace format 8: a fill followed by an Action that found the page still keeps a frame painted well after its scroll', async () => {
-  // As if the click had waited 60ms longer for its button to hold still:
-  // the click's events from its stability check on move 60ms later, and the
-  // last frame before them 55ms later, so it is painted over PAINT_LAG after
-  // the fill's scroll was recorded. Only the click's check vouches that the
-  // page did not scroll between the fill's end and that frame.
+/** How much longer the click waits for its button to hold still. */
+const CLICK_DELAY = 60;
+/** How much later the last frame before the click's check is painted. */
+const FRAME_DELAY = 55;
+
+/**
+ * `v8-scroll-still.zip` as if the click had waited CLICK_DELAY longer for
+ * its button to hold still: the click's events from its stability check on
+ * move CLICK_DELAY later, and the frames painted between the fill's end and
+ * that check FRAME_DELAY later.
+ */
+async function slowerClickTrace(): Promise<Record<string, Uint8Array>> {
   const entries = unzipSync(await readFile(fixture('v8-scroll-still.zip')));
   const events = strFromU8(entries['0-trace.trace'])
     .split('\n')
@@ -668,31 +675,44 @@ test('trace format 8: a fill followed by an Action that found the page still kee
   const fillEnd = events.find(
     (e) => e.type === 'after' && e.callId === 'call@10',
   ).endTime;
+  const later = (time: number | undefined, by: number) =>
+    time === undefined ? undefined : time + by;
   const shifted = events.map((e) => {
-    const at = e.time ?? e.startTime ?? e.endTime ?? e.snapshot?.timestamp;
     if (e.type === 'screencast-frame') {
-      const by = e.timestamp > fillEnd && e.timestamp < stable ? 55 : 0;
+      const by =
+        e.timestamp > fillEnd && e.timestamp < stable ? FRAME_DELAY : 0;
       return {
         ...e,
         timestamp: e.timestamp + by,
         frameSwapWallTime: e.frameSwapWallTime + by,
       };
     }
+    const at = e.time ?? e.startTime ?? e.endTime ?? e.snapshot?.timestamp;
     if (at === undefined || at < stable) return e;
     return {
       ...e,
-      ...(e.time !== undefined && { time: e.time + 60 }),
-      ...(e.startTime !== undefined && { startTime: e.startTime + 60 }),
-      ...(e.endTime !== undefined && { endTime: e.endTime + 60 }),
+      time: later(e.time, CLICK_DELAY),
+      startTime: later(e.startTime, CLICK_DELAY),
+      endTime: later(e.endTime, CLICK_DELAY),
       ...(e.snapshot && {
-        snapshot: { ...e.snapshot, timestamp: e.snapshot.timestamp + 60 },
+        snapshot: {
+          ...e.snapshot,
+          timestamp: e.snapshot.timestamp + CLICK_DELAY,
+        },
       }),
     };
   });
   entries['0-trace.trace'] = strToU8(
     shifted.map((e) => JSON.stringify(e)).join('\n'),
   );
-  const source = await openEntries(entries);
+  return entries;
+}
+
+test('trace format 8: a fill followed by an Action that found the page still keeps a frame painted well after its scroll', async () => {
+  // The last frame before the click's check is now painted over PAINT_LAG
+  // after the fill's scroll was recorded. Only the click's check vouches
+  // that the page did not scroll between the fill's end and that frame.
+  const source = await openEntries(await slowerClickTrace());
   const fill = source.capture(V8_BOOTS_FILL);
   assert.deepEqual(moments(fill), ['after']);
   // The typed field turns green; most of its 140×39 CSS pixels show it.
@@ -723,8 +743,9 @@ test('trace format 8: a fill whose last frame was painted before its scroll was 
   const source = await TraceScreenshotSource.open(
     fixture('v8-scroll-stale.zip'),
   );
-  assert.ok(source.capture(V8_BOOTS_FILL));
-  assert.deepEqual(moments(source.capture(V8_BOOTS_FILL)), []);
+  const fill = source.capture(V8_BOOTS_FILL);
+  assert.ok(fill);
+  assert.deepEqual(moments(fill), []);
 });
 
 test('trace format 8: a check Playwright skipped (already checked) gets no screenshot', async () => {
