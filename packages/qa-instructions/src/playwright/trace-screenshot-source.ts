@@ -108,6 +108,10 @@ type CallRecord = {
   callId?: string;
   /** The selector the call looked its element up by. */
   selector?: string;
+  /**
+   * The call's page: from its `before` event before 1.63, from its DOM
+   * snapshots from 1.63, whose `before` events name no page.
+   */
   pageId?: string;
   startTime?: number;
   endTime?: number;
@@ -115,6 +119,8 @@ type CallRecord = {
   scrollTime?: number;
   box?: QaBox;
   point?: QaPoint;
+  /** The stability checks the call logged, in the order logged. */
+  stabilityChecks: StabilityCheck[];
   /** The call sent input to the page (its `input` event). */
   inputSent?: boolean;
   /** The DOM snapshot taken as the input was sent, which dates the Action. */
@@ -140,8 +146,6 @@ class TraceCalls {
   readonly pages = new PageStates();
   private readonly callByStep = new Map<string, string>();
   private readonly records = new Map<string, CallRecord>();
-  /** Every page's stability checks, in the order logged, by page id. */
-  private readonly stabilityChecks = new Map<string, StabilityCheck[]>();
   /** When each DOM snapshot was taken, by snapshot name. */
   private readonly snapshotTimes = new Map<string, number>();
   /** Each frame's DOM snapshots, by frame id. */
@@ -153,6 +157,8 @@ class TraceCalls {
   private viewport?: QaSize;
   /** The context's wall-clock time minus its trace-clock time. */
   private wallClockOffset?: number;
+  /** The recording's page, when it recorded just one. */
+  private readonly onlyPage?: string;
 
   constructor(contexts: TraceEvent[][]) {
     for (const events of contexts) {
@@ -160,6 +166,7 @@ class TraceCalls {
       this.wallClockOffset = undefined;
       for (const event of events) this.add(event);
     }
+    this.onlyPage = this.screencast.onlyPage();
   }
 
   /** The library call made for a test runner step. */
@@ -172,14 +179,16 @@ class TraceCalls {
   recorded(record: CallRecord): RecordedCall {
     const nextChange = this.nextChange(record);
     return {
-      pageId: record.pageId,
+      pageId: this.pageOf(record),
       startTime: record.startTime,
       endTime: record.endTime,
       inputSnapshot: record.inputSnapshot,
       inputTime: this.inputTime(record),
       afterSnapshot:
         record.callId === undefined ? undefined : `after@${record.callId}`,
-      marks: record.point !== undefined || record.box !== undefined,
+      // From 1.63 a fill's input also carries its field's box, measured
+      // before its focus scrolls the page; only a click has a point.
+      marks: record.point !== undefined,
       nextChange,
       changedPage: this.pageChanged(record),
       settledAt: this.settledAt(record, nextChange),
@@ -203,10 +212,9 @@ class TraceCalls {
       .map(({ time }) => time);
     if (moving.length === 0) return undefined;
     const lastMoving = Math.max(...moving);
-    const checks = this.stabilityChecks.get(record.pageId ?? '') ?? [];
     return Math.min(
       Infinity,
-      ...checks
+      ...this.pageChecks(this.pageOf(record))
         .filter(({ still, time }) => still && time > lastMoving)
         .map(({ time }) => time),
     );
@@ -230,10 +238,28 @@ class TraceCalls {
     nextChange: number,
   ): StabilityCheck[] {
     const end = record.endTime ?? record.startTime;
-    if (end === undefined || record.pageId === undefined) return [];
-    return (this.stabilityChecks.get(record.pageId) ?? []).filter(
+    if (end === undefined) return [];
+    return this.pageChecks(this.pageOf(record)).filter(
       ({ time }) => time > end && time < nextChange,
     );
+  }
+
+  /** Every stability check logged by a call on the page, in time order. */
+  private pageChecks(pageId: string | undefined): StabilityCheck[] {
+    if (pageId === undefined) return [];
+    return [...this.records.values()]
+      .filter((record) => this.pageOf(record) === pageId)
+      .flatMap((record) => record.stabilityChecks)
+      .sort((a, b) => a.time - b.time);
+  }
+
+  /**
+   * The call's page. When nothing names it (1.63+ without DOM snapshots),
+   * the recording's only page: with one page recorded, every call that can
+   * change what it shows ran on it. Unknown when several pages were recorded.
+   */
+  private pageOf(record: CallRecord): string | undefined {
+    return record.pageId ?? this.onlyPage;
   }
 
   /**
@@ -297,13 +323,14 @@ class TraceCalls {
    * sends its input; any other call may change the page as it starts.
    */
   private nextChange(record: CallRecord): number {
-    const { startTime, pageId } = record;
+    const { startTime } = record;
+    const pageId = this.pageOf(record);
     if (startTime === undefined || pageId === undefined) return Infinity;
     const changes = [...this.records.values()]
       .filter(
         (other) =>
           other !== record &&
-          other.pageId === pageId &&
+          this.pageOf(other) === pageId &&
           other.startTime !== undefined &&
           other.startTime >= startTime &&
           !PASSIVE_METHODS.has(other.method),
@@ -343,18 +370,20 @@ class TraceCalls {
     if (typeof callId !== 'string') return;
 
     switch (event.type) {
-      case 'before':
+      case 'before': {
         // Versions 8 and 9 link a call to its step through `stepId`;
         // version 10 uses the step id as the call id.
         this.callByStep.set(
           typeof event.stepId === 'string' ? event.stepId : callId,
           callId,
         );
-        Object.assign(this.record(callId), {
+        const record = this.record(callId);
+        Object.assign(record, {
           method: event.method,
           callId,
           forced: this.isRecord(event.params) && event.params.force === true,
-          pageId: typeof event.pageId === 'string' ? event.pageId : undefined,
+          pageId:
+            typeof event.pageId === 'string' ? event.pageId : record.pageId,
           startTime: this.number(event.startTime),
           selector:
             this.isRecord(event.params) &&
@@ -364,6 +393,7 @@ class TraceCalls {
           expect: this.expectParams(event),
         });
         break;
+      }
       case 'after':
         this.record(callId).endTime = this.number(event.endTime);
         break;
@@ -386,10 +416,12 @@ class TraceCalls {
           inputSent: true,
           box: this.box(event.box),
           point: this.point(event.point),
+          // From 1.63 the input snapshot is the call's `action` phase, as
+          // Playwright's own trace loader renames version 8's.
           inputSnapshot:
             typeof event.inputSnapshot === 'string'
               ? event.inputSnapshot
-              : undefined,
+              : `action@${callId}`,
         });
         break;
       case 'screenshot':
@@ -418,15 +450,19 @@ class TraceCalls {
     this.pages.add(snapshot);
     this.indexSnapshot(snapshot, frameKey, index);
 
-    const { snapshotName, timestamp } = snapshot;
+    const snapshotName = PageStates.nameOf(snapshot);
+    const { timestamp, pageId } = snapshot;
     if (
-      typeof snapshotName === 'string' &&
+      snapshotName !== undefined &&
       typeof timestamp === 'number' &&
       !this.snapshotTimes.has(snapshotName)
     ) {
       this.snapshotTimes.set(snapshotName, timestamp);
     }
     const record = this.record(snapshot.callId);
+    if (record.pageId === undefined && typeof pageId === 'string') {
+      record.pageId = pageId;
+    }
     if (record.element || !SnapshotTarget.isMarkedIn(snapshot.html)) return;
     const target = SnapshotTarget.find(frame.document(index), snapshot.callId);
     if (target) {
@@ -441,21 +477,10 @@ class TraceCalls {
     time: number | undefined,
     message: unknown,
   ): void {
-    if (
-      time === undefined ||
-      record.pageId === undefined ||
-      typeof message !== 'string'
-    ) {
-      return;
-    }
+    if (time === undefined || typeof message !== 'string') return;
     const still = STILL_LOG.test(message);
     if (!still && !MOVING_LOG.test(message)) return;
-    let checks = this.stabilityChecks.get(record.pageId);
-    if (!checks) {
-      checks = [];
-      this.stabilityChecks.set(record.pageId, checks);
-    }
-    checks.push({ time, still });
+    record.stabilityChecks.push({ time, still });
   }
 
   /** Remembers where a named snapshot sits among its frame's snapshots. */
@@ -501,7 +526,11 @@ class TraceCalls {
   private record(callId: string): CallRecord {
     let record = this.records.get(callId);
     if (!record) {
-      record = { screenshots: [], viewport: this.viewport };
+      record = {
+        screenshots: [],
+        stabilityChecks: [],
+        viewport: this.viewport,
+      };
       this.records.set(callId, record);
     }
     return record;

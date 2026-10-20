@@ -59,9 +59,9 @@ importers:
       '@qa-instructions/fixture-site':
         specifier: workspace:*
         version: link:../fixture-site
-      pngjs:
-        specifier: ^7.0.0
-        version: 7.0.0
+      sharp:
+        specifier: ^0.35.4
+        version: 0.35.4(@types/node@26.6.2)
 
   examples/derived-steps-1.56:
     devDependencies:

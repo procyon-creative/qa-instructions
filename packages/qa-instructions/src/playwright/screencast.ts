@@ -68,6 +68,13 @@ export class Screencast {
       .at(-1);
   }
 
+  /** The page every frame records, when the recording has just one. */
+  onlyPage(): string | undefined {
+    const pages = new Set(this.frames.map((frame) => frame.pageId));
+    const [page] = pages;
+    return pages.size === 1 ? page : undefined;
+  }
+
   /** The page's first frame. */
   first(pageId: string | undefined): ScreencastFrame | undefined {
     return this.pageFrames(pageId)[0];

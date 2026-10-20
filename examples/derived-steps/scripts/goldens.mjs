@@ -138,7 +138,10 @@ export const OUTPUT_DIRS = [REPORT];
  * Step, taken at the expected moment, with the Highlight marks it should
  * carry and pixel probes on known elements and on the Highlight itself.
  * Where a golden sets `resultsListed`, only the steps given a `result` have
- * a Result Screenshot, unhighlighted, with its own probes.
+ * a Result Screenshot, unhighlighted, with its own probes. Where the moment
+ * depends on the screen recording's timing, a step lists probes `byMoment`;
+ * an `optional` step may have no Step Screenshot; `tolerance` widens the
+ * probes' per-channel margin for JPEG frames.
  */
 export const SCREENSHOT_GOLDENS = [
   'golden/sign-in--sign-in-with-bad-credentials.screenshots.json',
@@ -148,4 +151,6 @@ export const SCREENSHOT_GOLDENS = [
   'golden/moving-ui--register-a-warranty-from-the-menu.screenshots.json',
   'golden/moving-ui--highlight-styles.screenshots.json',
   'golden/long-page--order-boots-from-the-bottom-of-the-page.screenshots.json',
+  // Plain `trace: 'on'`: screen recording frames, each of its step's page.
+  'golden/sign-in--trace-on.screenshots.json',
 ];

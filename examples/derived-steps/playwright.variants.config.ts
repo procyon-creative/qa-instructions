@@ -17,11 +17,12 @@ if (!variant) {
 export default defineConfig(base, {
   testMatch: variant.testMatch,
   outputDir: `test-results/${name}`,
+  use: { ...base.use, ...('use' in variant ? variant.use : {}) },
   reporter: [
     ['list'],
     [
       '@procyon-creative/qa-instructions/playwright',
-      { mask, open: 'never', ...variant.options },
+      { mask, open: 'never', ...('options' in variant ? variant.options : {}) },
     ],
   ],
 });

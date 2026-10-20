@@ -16,6 +16,6 @@
     "@playwright/test": "^1.63.0",
     "@procyon-creative/qa-instructions": "workspace:*",
     "@qa-instructions/fixture-site": "workspace:*",
-    "pngjs": "^7.0.0"
+    "sharp": "^0.35.4"
   }
 }
