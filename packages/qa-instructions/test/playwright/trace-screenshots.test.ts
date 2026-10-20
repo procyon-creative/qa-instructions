@@ -623,25 +623,86 @@ test('trace format 8: a fill whose smooth scroll no later snapshot shows had set
 });
 
 /**
- * The boots page's trace on Playwright 1.56 (the derived-steps `/order` test,
- * viewport 800×600): the fill scrolls the page at once, and the recording's
- * last frame before the click scrolled is painted after the click's first
- * DOM snapshot. The click then found the page still, never seeing it move,
- * and the snapshots record no scroll between the fill's end and that check.
+ * The boots page's traces on Playwright 1.56 (the derived-steps `/order`
+ * test, viewport 800×600): the fill scrolls the page at once, and the click
+ * then finds the page still, never seeing it move.
  */
-const V8_SCROLL_STILL_FILL = ActionRef.of(
+const V8_BOOTS_FILL = ActionRef.of(
   5,
   `Fill "3" getByLabel('Trail boots quantity')`,
 );
 
-test('trace format 8: a fill followed by an Action that found the page still keeps its frame', async () => {
+/**
+ * `v8-scroll-still.zip`: the recording's last frame before the click
+ * scrolled is painted after the click's first DOM snapshot, 9ms after the
+ * fill's `after` snapshot first recorded its scroll, and the snapshots
+ * record no scroll between the fill's end and the click's check.
+ */
+test('trace format 8: a fill whose only frame was painted within PAINT_LAG of its recorded scroll gets no screenshot', async () => {
+  // That frame happens to show the typed field, but frames painted up to
+  // 15ms after a recorded scroll have shown the page before it.
   const source = await TraceScreenshotSource.open(
     fixture('v8-scroll-still.zip'),
   );
-  const fill = source.capture(V8_SCROLL_STILL_FILL);
+  assert.ok(source.capture(V8_BOOTS_FILL));
+  assert.deepEqual(moments(source.capture(V8_BOOTS_FILL)), []);
+});
+
+test('trace format 8: a fill followed by an Action that found the page still keeps a frame painted well after its scroll', async () => {
+  // As if the click had waited 60ms longer for its button to hold still:
+  // the click's events from its stability check on move 60ms later, and the
+  // last frame before them 55ms later, so it is painted over PAINT_LAG after
+  // the fill's scroll was recorded. Only the click's check vouches that the
+  // page did not scroll between the fill's end and that frame.
+  const entries = unzipSync(await readFile(fixture('v8-scroll-still.zip')));
+  const events = strFromU8(entries['0-trace.trace'])
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+  const stable = events.find(
+    (e) =>
+      e.type === 'log' &&
+      e.callId === 'call@12' &&
+      /^ *element is visible, enabled and stable/.test(e.message),
+  ).time;
+  const fillEnd = events.find(
+    (e) => e.type === 'after' && e.callId === 'call@10',
+  ).endTime;
+  const shifted = events.map((e) => {
+    const at = e.time ?? e.startTime ?? e.endTime ?? e.snapshot?.timestamp;
+    if (e.type === 'screencast-frame') {
+      const by = e.timestamp > fillEnd && e.timestamp < stable ? 55 : 0;
+      return {
+        ...e,
+        timestamp: e.timestamp + by,
+        frameSwapWallTime: e.frameSwapWallTime + by,
+      };
+    }
+    if (at === undefined || at < stable) return e;
+    return {
+      ...e,
+      ...(e.time !== undefined && { time: e.time + 60 }),
+      ...(e.startTime !== undefined && { startTime: e.startTime + 60 }),
+      ...(e.endTime !== undefined && { endTime: e.endTime + 60 }),
+      ...(e.snapshot && {
+        snapshot: { ...e.snapshot, timestamp: e.snapshot.timestamp + 60 },
+      }),
+    };
+  });
+  entries['0-trace.trace'] = strToU8(
+    shifted.map((e) => JSON.stringify(e)).join('\n'),
+  );
+  const source = await openEntries(entries);
+  const fill = source.capture(V8_BOOTS_FILL);
   assert.deepEqual(moments(fill), ['after']);
   // The typed field turns green; most of its 140×39 CSS pixels show it.
-  const { data, info } = await sharp(shot(fill, 'after').data)
+  const green = await greenPixels(shot(fill, 'after'));
+  assert.ok(green >= 2000, `the typed field is shown (${green} green pixels)`);
+});
+
+/** How many pixels of a frame show the boots page's typed (green) field. */
+async function greenPixels(screenshot: Screenshot): Promise<number> {
+  const { data, info } = await sharp(screenshot.data)
     .raw()
     .toBuffer({ resolveWithObject: true });
   let green = 0;
@@ -651,7 +712,19 @@ test('trace format 8: a fill followed by an Action that found the page still kee
       green += 1;
     }
   }
-  assert.ok(green >= 2000, `the typed field is shown (${green} green pixels)`);
+  return green;
+}
+
+test('trace format 8: a fill whose last frame was painted before its scroll was recorded gets no screenshot, never one of the page before it', async () => {
+  // `v8-scroll-stale.zip` (QI-44), from a local run that gave the fill a
+  // frame of the page top (1 run in about 500 under load): the only frame
+  // after the fill ended was painted 13ms before its `after` snapshot first
+  // recorded the scroll, and shows the page as it was before the fill.
+  const source = await TraceScreenshotSource.open(
+    fixture('v8-scroll-stale.zip'),
+  );
+  assert.ok(source.capture(V8_BOOTS_FILL));
+  assert.deepEqual(moments(source.capture(V8_BOOTS_FILL)), []);
 });
 
 test('trace format 8: a check Playwright skipped (already checked) gets no screenshot', async () => {
