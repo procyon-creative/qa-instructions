@@ -8,7 +8,7 @@ import { test, expect } from '@playwright/test';
 //   cp test-results/*/trace.zip test/fixtures/traces/v9-scripts.zip
 //
 // and `v8-scripts.zip` with Playwright 1.56 (see
-// examples/derived-steps-1.56/scripts/record-fixtures.mjs).
+// examples/derived-steps-1.56/scripts/record-fixtures.ts).
 //
 // Each script either changes the page or leaves it as it was, whatever the
 // test does with its result, and the forced click's options are built away

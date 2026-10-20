@@ -1,16 +1,16 @@
 import { defineConfig } from '@playwright/test';
 
-import base from './playwright.config';
+import base from './playwright.config.ts';
 
 // Records the Playwright 1.56 fixtures of the adapter's unit tests; see
-// scripts/record-fixtures.mjs.
+// scripts/record-fixtures.ts.
 export default defineConfig({
   ...base,
   outputDir: 'test-results/record',
   reporter: [
     ['list'],
     [
-      '../../packages/qa-instructions/test/playwright/fixtures/steps/step-dump-reporter.mjs',
+      '../../packages/qa-instructions/test/playwright/fixtures/steps/step-dump-reporter.ts',
       {
         outputDir:
           '../../packages/qa-instructions/test/playwright/fixtures/steps/1.56',

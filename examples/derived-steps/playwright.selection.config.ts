@@ -1,6 +1,6 @@
 import { defineConfig } from '@playwright/test';
 
-import base from './playwright.config';
+import base from './playwright.config.ts';
 
 // Same run as playwright.config.ts, but only tests tagged `@qa` produce
 // QA Instructions. Its own outputDir puts its QA Report in

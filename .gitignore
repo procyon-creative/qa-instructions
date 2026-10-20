@@ -5,8 +5,11 @@ dist-test/
 qa-steps-out/
 playwright-report/
 test-results/
+# The examples' e2e runs (playwright.e2e.config.ts).
+e2e-results/
+e2e-report/
 .claude/settings.local.json
 .playwright-mcp/
-# Copies made by examples/derived-steps-1.56/scripts (see shared.mjs).
+# Copies made by examples/derived-steps-1.56/scripts (see spec-sync.ts).
 examples/derived-steps-1.56/tests/
 examples/derived-steps-1.56/trace-scenario/

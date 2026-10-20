@@ -3,14 +3,15 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "tsc -p tsconfig.json",
     "test": "playwright test",
-    "verify": "node scripts/verify-run.mjs",
-    "verify:update-goldens": "node scripts/update-goldens.mjs",
-    "e2e": "pnpm test && pnpm verify"
+    "e2e": "playwright test -c playwright.e2e.config.ts"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@procyon-creative/qa-instructions": "workspace:*",
+    "@qa-instructions/e2e-kit": "workspace:*",
     "@qa-instructions/fixture-site": "workspace:*",
-    "@playwright/test": "^1.63.0"
+    "@types/node": "^26.6.2"
   }
 }

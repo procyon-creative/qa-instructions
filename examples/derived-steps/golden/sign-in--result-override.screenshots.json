@@ -1,31 +1,56 @@
 {
-  "bundleDirs": ["result-override/sign-in--sign-in-with-bad-credentials"],
-  "viewport": { "width": 800, "height": 600 },
+  "bundleDirs": [
+    "result-override/sign-in--sign-in-with-bad-credentials"
+  ],
+  "viewport": {
+    "width": 800,
+    "height": 600
+  },
   "minBytes": 2000,
   "resultsListed": true,
   "highlights": [
     null,
-    ["outline", "clickDot"],
-    ["outline"],
-    ["outline", "clickDot"]
+    [
+      "outline",
+      "clickDot"
+    ],
+    [
+      "outline"
+    ],
+    [
+      "outline",
+      "clickDot"
+    ]
   ],
   "steps": [
     {
       "action": "Open http://127.0.0.1:4321/",
       "moment": "after",
       "probes": [
-        { "name": "home marker", "x": 400, "y": 140, "rgb": [0, 85, 255] }
+        {
+          "name": "home marker",
+          "x": 400,
+          "y": 140
+        }
       ]
     },
     {
       "action": "Click the **Sign in** link",
       "moment": "action",
       "probes": [
-        { "name": "home marker", "x": 400, "y": 140, "rgb": [0, 85, 255] }
+        {
+          "name": "home marker",
+          "x": 400,
+          "y": 140
+        }
       ],
       "result": {
         "probes": [
-          { "name": "login marker", "x": 400, "y": 140, "rgb": [255, 136, 0] }
+          {
+            "name": "login marker",
+            "x": 400,
+            "y": 140
+          }
         ]
       }
     },
@@ -33,22 +58,29 @@
       "action": "Type **demo-user** into **Username**",
       "moment": "action",
       "probes": [
-        { "name": "login marker", "x": 400, "y": 140, "rgb": [255, 136, 0] }
+        {
+          "name": "login marker",
+          "x": 400,
+          "y": 140
+        }
       ]
     },
     {
       "action": "Click the **Submit bad credentials** button",
       "moment": "action",
       "probes": [
-        { "name": "login marker", "x": 400, "y": 140, "rgb": [255, 136, 0] }
+        {
+          "name": "login marker",
+          "x": 400,
+          "y": 140
+        }
       ],
       "result": {
         "probes": [
           {
             "name": "Login failed page's error banner",
             "x": 400,
-            "y": 140,
-            "rgb": [204, 0, 0]
+            "y": 140
           }
         ]
       }

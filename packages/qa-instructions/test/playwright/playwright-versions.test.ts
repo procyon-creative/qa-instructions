@@ -12,7 +12,7 @@ import QaInstructionsReporter from '../../src/playwright/index.js';
 
 /**
  * Reporter steps recorded from the derived-steps example on Playwright 1.56
- * and 1.63 (see test/fixtures/steps/step-dump-reporter.mjs). Their source
+ * and 1.63 (see test/fixtures/steps/step-dump-reporter.ts). Their source
  * locations point at the spec copies next to them.
  */
 const STEPS = fileURLToPath(

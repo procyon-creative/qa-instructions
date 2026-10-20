@@ -1,5 +1,15 @@
 # AGENTS.md
 
+## Testing standard
+
+Verification is tests under a test runner. Playwright Test for E2E checks and goldens, `node:test` for unit tests. No standalone check scripts: no `verify-*`, `run-*`, or `update-goldens` scripts that read output and `process.exit`, and no `&&` chains of runs.
+
+- **Goldens** are Playwright snapshots: `expect(actual).toMatchSnapshot(...)` (text, Markdown, HTML, JSON, and images with `threshold` / `maxDiffPixels`, a wider tolerance for JPEG frames). `--update-snapshots` rewrites them; there is no update script.
+- **Ordering and variants** are Playwright projects with `dependencies` (the sample runs, then the verify project), or one config per run where a reporter option differs (a reporter is configured per run, not per project).
+- **Code is TypeScript**, typechecked by each package's `build`. No `.mjs` or `.cjs` files.
+- **The old scripts are not a pattern.** Reviews flag a new script that checks output instead of a test.
+- Never open a browser or report from a test run (`open: 'never'`).
+
 ## Agent skills
 
 ### Issue tracker

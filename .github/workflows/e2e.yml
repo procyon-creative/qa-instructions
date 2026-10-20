@@ -61,9 +61,11 @@ jobs:
         if: failure()
         with:
           name: playwright-report
+          # Each example's verification run (e2e-report/, e2e-results/) and
+          # the sample runs it made (test-results/).
           path: |
-            examples/verification/playwright-report/
-            examples/verification/test-results/
-            examples/derived-steps/test-results/
-            examples/derived-steps-1.56/test-results/
+            examples/*/e2e-report/
+            examples/*/e2e-results/
+            examples/*/playwright-report/
+            examples/*/test-results/
           retention-days: 7

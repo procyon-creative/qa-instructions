@@ -3,16 +3,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node scripts/sync-specs.mjs && playwright test",
-    "verify": "node scripts/verify-run.mjs",
-    "verify:no-trace": "node scripts/verify-no-trace.mjs",
-    "record-fixtures": "node scripts/record-fixtures.mjs",
-    "e2e": "pnpm test && pnpm verify && pnpm verify:no-trace"
+    "build": "tsc -p tsconfig.json",
+    "sync-specs": "node scripts/sync-specs.ts",
+    "test": "pnpm sync-specs && playwright test",
+    "record-fixtures": "node scripts/record-fixtures.ts",
+    "e2e": "playwright test -c playwright.e2e.config.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.56.1",
     "@procyon-creative/qa-instructions": "workspace:*",
+    "@qa-instructions/e2e-kit": "workspace:*",
     "@qa-instructions/fixture-site": "workspace:*",
-    "sharp": "^0.35.4"
+    "@types/node": "^26.6.2"
   }
 }

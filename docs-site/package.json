@@ -11,12 +11,17 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "test": "astro build && node --test test/*.test.mjs"
+    "typecheck": "tsc --noEmit",
+    "test": "astro build && tsc --noEmit && node --test test/*.test.ts"
   },
   "dependencies": {
     "@procyon-creative/astro-theme": "^0.2.0",
     "@tailwindcss/vite": "^4.0.0",
     "astro": "^5.18.0",
     "tailwindcss": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^6.0.3"
   }
 }

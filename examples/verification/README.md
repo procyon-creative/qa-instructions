@@ -6,7 +6,7 @@ Deterministic e2e for the capture → render pipeline, with only the reporter li
 
 1. **Unmodified test** — `tests/capture.spec.ts` is an ordinary Playwright test against a local Astro fixture site; it does not import qa-instructions
 2. **Reporter** — `@procyon-creative/qa-instructions/playwright`, configured with no options, derives the QA Instructions and writes the QA Report to `test-results/qa-report/`, inside Playwright's default `outputDir`: `index.html`, and `capture--login-error-flow/` with `bundle.json`, the test's page (`qa-steps.html`), and its Jira-ready text (`qa-steps.txt`)
-3. **Golden verification** — the bundle (normalized), the Jira-ready text, and the index must equal `golden/`
+3. **Golden verification** — the bundle (normalized), the Jira-ready text, and the index must equal `golden/`, as Playwright Test snapshots (`e2e/qa-report.spec.ts`)
 
 This example runs without the trace setting, so its QA Steps are text only. Step Screenshot checks live in `examples/derived-steps`.
 
@@ -16,19 +16,14 @@ This example runs without the trace setting, so its QA Steps are text only. Step
 pnpm --filter @qa-instructions/example-verification e2e
 ```
 
-Or step by step:
-
-```bash
-pnpm test      # Playwright + fixture-site webServer; the run writes test-results/qa-report/
-pnpm verify    # diff against golden/
-```
+`pnpm e2e` is one Playwright Test run (`playwright.e2e.config.ts`): the `runs` project makes the sample run (`playwright.config.ts`, which writes `test-results/qa-report/`), and the `verify` project, which depends on it, checks the QA Report against `golden/`. `pnpm test` runs the sample test alone.
 
 ## Update goldens
 
 After intentional fixture or wording changes:
 
 ```bash
-pnpm test && pnpm verify:update-goldens
+pnpm e2e --update-snapshots
 git add golden/
 ```
 

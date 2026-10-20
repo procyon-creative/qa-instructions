@@ -4,6 +4,8 @@ dist-test/
 qa-steps-out/
 playwright-report/
 test-results/
+e2e-results/
+e2e-report/
 pnpm-lock.yaml
 # Historical release-please output, kept as written. Release notes after 3.0.0
 # are on GitHub Releases.

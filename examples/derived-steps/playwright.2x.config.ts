@@ -1,6 +1,6 @@
 import { defineConfig } from '@playwright/test';
 
-import base from './playwright.config';
+import base from './playwright.config.ts';
 
 // The moving-UI test on a high-DPI (2x) screen: Highlights must still line
 // up with their elements. Its own outputDir puts its QA Report in
