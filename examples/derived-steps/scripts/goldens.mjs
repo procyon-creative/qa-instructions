@@ -82,6 +82,27 @@ export const GOLDENS = [
       bundleDir: path.posix.join(reportOf(folder), name),
     })),
   ),
+  // QA_SITE set (the qa-site variant): the page and Jira text point at the QA Site.
+  {
+    rendered: reported(
+      'sign-in--sign-in-with-bad-credentials',
+      'txt',
+      'qa-site',
+    ),
+    golden: 'golden/qa-site/sign-in--sign-in-with-bad-credentials.txt',
+  },
+  {
+    rendered: reported(
+      'sign-in--sign-in-with-bad-credentials',
+      'html',
+      'qa-site',
+    ),
+    golden: 'golden/qa-site/sign-in--sign-in-with-bad-credentials.html',
+    bundleDir: path.posix.join(
+      reportOf('qa-site'),
+      'sign-in--sign-in-with-bad-credentials',
+    ),
+  },
   text('moving-ui--register-a-warranty-from-the-menu'),
   // Checks with the author's messages, on values read into variables.
   text('cart--add-credits-to-the-cart'),

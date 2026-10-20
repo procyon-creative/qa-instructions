@@ -68,9 +68,7 @@ export class HtmlRenderer {
       ? ` <em class="approximate">(${QaWording.approximate})</em>`
       : '';
 
-    const paragraphs = [
-      `<p>${warning}${InlineMarkup.toHtml(step.action)}${approximate}`,
-    ];
+    const paragraphs = [`<p>${warning}${this.action(step)}${approximate}`];
     if (step.expected) {
       paragraphs.push(
         `<p><strong>${QaWording.expected}:</strong> ${InlineMarkup.toHtml(step.expected)}`,
@@ -91,6 +89,13 @@ export class HtmlRenderer {
       '</li>',
     );
     return lines;
+  }
+
+  /** The Action, with an "Open" step's address as a link. */
+  private action(step: QaStepView): string {
+    if (!step.link) return InlineMarkup.toHtml(step.action);
+    const address = InlineMarkup.escapeHtml(step.link);
+    return `Open <a href="${address}">${address}</a>`;
   }
 
   /** The screenshot as a figure, or nothing when its image is unavailable. */

@@ -1,5 +1,6 @@
 import type { QaAsset, QaRunBundle, QaStep } from '../model.js';
 import { InlineMarkup } from './inline-markup.js';
+import type { QaSite } from './qa-site.js';
 
 /** Words every format shows the same way, so the formats never drift apart. */
 export const QaWording = {
@@ -20,6 +21,11 @@ export const QaWording = {
  */
 export type StepScreenshotView = { asset: QaAsset; alt: string };
 
+export type ViewOptions = {
+  /** Where testers follow the QA Instructions; omitted, addresses are as saved. */
+  qaSite?: QaSite;
+};
+
 /** One QA Step as every format shows it. Text fields use inline markup. */
 export type QaStepView = {
   number: number;
@@ -27,6 +33,11 @@ export type QaStepView = {
   expected?: string;
   warning: boolean;
   approximate: boolean;
+  /**
+   * The address an "Open" step opens, when pages should link it: the step's
+   * whole Action is "Open" and the address, and a QA Site is in use.
+   */
+  link?: string;
   /** What failed on this step, worded: the test, or else a soft check. */
   failure?: string;
   screenshot?: StepScreenshotView;
@@ -59,14 +70,18 @@ export class QaInstructionsView {
     readonly runs: readonly SectionRun[],
   ) {}
 
-  static from(bundle: QaRunBundle): QaInstructionsView {
+  /** With a `qaSite`, Test Site addresses in the steps point at it. */
+  static from(
+    bundle: QaRunBundle,
+    options: ViewOptions = {},
+  ): QaInstructionsView {
     return new QaInstructionsView(
       bundle.meta.title,
       bundle.meta.prerequisite,
       bundle.meta.status === 'incomplete'
         ? QaInstructionsView.incompleteNote(bundle.steps)
         : undefined,
-      QaInstructionsView.sectionRuns(bundle),
+      QaInstructionsView.sectionRuns(bundle, options.qaSite),
     );
   }
 
@@ -87,14 +102,17 @@ export class QaInstructionsView {
     return 'the test failed before its first step.';
   }
 
-  private static sectionRuns(bundle: QaRunBundle): SectionRun[] {
+  private static sectionRuns(
+    bundle: QaRunBundle,
+    qaSite: QaSite | undefined,
+  ): SectionRun[] {
     const runs: SectionRun[] = [];
     let previous: readonly string[] = [];
     for (const step of bundle.steps) {
       const section = step.section ?? [];
       const current = runs.at(-1);
       if (current && QaInstructionsView.sameSection(current.section, section)) {
-        current.steps.push(QaInstructionsView.stepView(bundle, step));
+        current.steps.push(QaInstructionsView.stepView(bundle, step, qaSite));
         continue;
       }
       const shared = QaInstructionsView.sharedLength(previous, section);
@@ -102,20 +120,32 @@ export class QaInstructionsView {
         section,
         shared,
         closes: previous.length - shared,
-        steps: [QaInstructionsView.stepView(bundle, step)],
+        steps: [QaInstructionsView.stepView(bundle, step, qaSite)],
       });
       previous = section;
     }
     return runs;
   }
 
-  private static stepView(bundle: QaRunBundle, step: QaStep): QaStepView {
+  private static stepView(
+    bundle: QaRunBundle,
+    step: QaStep,
+    qaSite: QaSite | undefined,
+  ): QaStepView {
+    const retarget = (text: string | undefined) =>
+      text === undefined || !qaSite
+        ? text
+        : qaSite.retarget(text, bundle.meta.testSite);
+    const action = retarget(step.action) ?? step.action;
+    const url = retarget(step.url);
+    const expected = retarget(step.expected);
     const asset = QaInstructionsView.asset(bundle, step.assetIds?.[0]);
     const result = QaInstructionsView.asset(bundle, step.resultAssetId);
     return {
       number: step.index,
-      action: step.action,
-      expected: step.expected,
+      action,
+      expected,
+      link: qaSite && url && action === `Open ${url}` ? url : undefined,
       warning: step.warning ?? false,
       approximate: step.approximate ?? false,
       failure: step.failed
@@ -126,13 +156,13 @@ export class QaInstructionsView {
       screenshot: asset
         ? {
             asset,
-            alt: `Step ${step.index}: ${InlineMarkup.toPlain(step.action)}`,
+            alt: `Step ${step.index}: ${InlineMarkup.toPlain(action)}`,
           }
         : undefined,
       resultScreenshot: result
         ? {
             asset: result,
-            alt: `Step ${step.index} result: ${InlineMarkup.toPlain(step.expected ?? step.action)}`,
+            alt: `Step ${step.index} result: ${InlineMarkup.toPlain(expected ?? action)}`,
           }
         : undefined,
     };

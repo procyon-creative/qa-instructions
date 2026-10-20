@@ -11,6 +11,7 @@ export type BundleBuilder = {
   addStep(input: QaStepInput): QaStep;
   addAsset(input: QaAssetInput): void;
   setStatus(status: QaRunBundle['meta']['status']): void;
+  setTestSite(testSite: string): void;
   setSource(source: NonNullable<QaRunBundle['meta']['source']>): void;
   toBundle(): QaRunBundle;
   pendingAssets(): QaAssetInput[];
@@ -63,6 +64,9 @@ export function createBundleBuilder(): BundleBuilder {
     },
     setStatus(status) {
       meta.status = status;
+    },
+    setTestSite(testSite) {
+      meta.testSite = testSite;
     },
     setSource(source) {
       meta.source = source;

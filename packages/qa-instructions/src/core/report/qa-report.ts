@@ -6,7 +6,7 @@ import { BundleOutputDir, type BundleOwner } from '../bundle/output-dir.js';
 import { BundleRenderer, InBundleLayout } from '../bundle/renderer.js';
 import { StaleBundlePolicy, type RunCoverage } from '../bundle/stale-policy.js';
 import type { QaAssetInput, QaRunBundle } from '../model.js';
-import type { RenderFormat } from '../render/index.js';
+import type { QaSite, RenderFormat } from '../render/index.js';
 import { QaReportIndexHtml } from './index-html.js';
 import { QaReportIndexView, type QaReportTest } from './index-view.js';
 
@@ -15,6 +15,11 @@ export type QaReportOptions = {
   formats?: readonly RenderFormat[];
   /** Which tests' directories from earlier runs to remove. */
   stalePolicy?: StaleBundlePolicy;
+  /**
+   * Where testers follow the QA Instructions: Test Site addresses in the
+   * pages and Jira-ready text point here. The saved data is never changed.
+   */
+  qaSite?: QaSite;
 };
 
 /**
@@ -42,7 +47,7 @@ export class QaReport {
     const layout = new InBundleLayout();
     const formats = new Set([...QaReport.FORMATS, ...(options.formats ?? [])]);
     this.renderers = [...formats].map(
-      (format) => new BundleRenderer(format, layout),
+      (format) => new BundleRenderer(format, layout, options.qaSite),
     );
   }
 

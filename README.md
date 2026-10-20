@@ -103,6 +103,7 @@ The second element of the reporter entry in `playwright.config.ts`.
 | `highlight`         | `'outline' \| 'clickDot' \| 'badge' \| 'spotlight'`, a list of these, or `'none'` | `['outline', 'clickDot']`   |
 | `resultScreenshots` | `'last' \| 'every' \| 'none'` or `{ steps, overrides }`                           | `'last'`                    |
 | `mask`              | `(string \| RegExp)[]`                                                            | none (password fields only) |
+| `qaSite`            | `string` (an absolute http(s) address)                                            | none (addresses unchanged)  |
 
 ### Where the QA Report goes
 
@@ -261,6 +262,22 @@ Anything a test types into a password field is masked without configuration: the
 
 Masking covers text only. Password fields already show as dots in Step Screenshots; other masked values may still be visible in a screenshot.
 
+### `qaSite`
+
+Tests usually run against a site testers can't reach, such as a local Lando or localhost address. Set `qaSite` to the site testers use (a multidev or dev server) and every address on the site the test ran against, the Test Site, points there instead, keeping its path and query. It applies to QA Steps (the address of an "Open" step), full-address Expected Results (`the page address is https://…`), the HTML pages, and the Jira-ready text. On the HTML pages an "Open" step's address is a link; the Jira text keeps plain addresses.
+
+```typescript
+{
+  qaSite: 'https://pr-123-mysite.pantheonsite.io';
+}
+```
+
+- The `QA_SITE` environment variable overrides `qaSite` for one run, so CI can point a report at the multidev it just deployed: `QA_SITE=https://pr-123-mysite.pantheonsite.io npx playwright test`.
+- The Test Site is detected, not configured: Playwright's `baseURL` if set, otherwise the first page the test opens by full address. With neither, one warning is printed and nothing is rewritten.
+- Only addresses whose scheme, host, and port equal the Test Site's change. Other hosts (payment providers, external links), partial address checks (`the page address contains login-error`), and screenshots are left as they were. Masking still applies.
+- The saved data (`bundle.json`) keeps the original addresses and records the Test Site as `meta.testSite`, so [`qa-instructions render --qa-site`](#render) can point an existing QA Report at a different QA Site without re-running tests.
+- A value that is not an absolute http(s) address is ignored, with one warning. Without a QA Site, the output is as it was.
+
 ## Playwright versions
 
 Requires `@playwright/test` 1.53 or later.
@@ -312,10 +329,12 @@ Without `[folder]` it opens `test-results/qa-report/` beside the `package.json` 
 Every test run writes its QA Report; nothing needs rendering by hand. The `qa-instructions` command, from the same package, regenerates a QA Report from the saved data in it without re-running tests, for example after upgrading this package:
 
 ```bash
-npx qa-instructions render <folder> [--format qa-steps|markdown|html|json]...
+npx qa-instructions render <folder> [--format qa-steps|markdown|html|json]... [--qa-site <url>]
 ```
 
 `<folder>` is the QA Report's folder (`<outputDir>/qa-report/`), relative to the working directory. Every test directory in it that holds saved data gets its page and Jira-ready text again, plus each `--format` given, which takes the values of the [`formats`](#formats) option and can be repeated; then `index.html` is rewritten. The result is laid out exactly as a run writes it. For example, `qa-instructions render test-results/qa-report --format markdown` adds `qa-steps.md` to every test.
+
+`--qa-site <url>` points the Test Site addresses in every test's page and Jira-ready text at that QA Site (see [`qaSite`](#qasite)), so a new multidev for the same branch needs no re-run. The saved data is not changed, so the next `render` can point at another QA Site, or none.
 
 ## Architecture
 

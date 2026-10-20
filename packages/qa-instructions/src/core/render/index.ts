@@ -3,6 +3,7 @@ import { HtmlRenderer } from './html.js';
 import type { StepImages } from './images.js';
 import { MarkdownRenderer } from './markdown.js';
 import { TextRenderer } from './text.js';
+import type { QaSite } from './qa-site.js';
 import { QaInstructionsView } from './view.js';
 
 export {
@@ -11,23 +12,32 @@ export {
   type StepImages,
 } from './images.js';
 export { InlineMarkup } from './inline-markup.js';
+export { QaSite } from './qa-site.js';
 export {
   QaInstructionsView,
   QaWording,
   type QaStepView,
   type SectionRun,
   type StepScreenshotView,
+  type ViewOptions,
 } from './view.js';
 export { HtmlRenderer, MarkdownRenderer, TextRenderer };
 
 export type RenderOptions = {
   /** Where Markdown and HTML find Step Screenshots; omitted, none are shown. */
   images?: StepImages;
+  /** Points Test Site addresses in the QA Steps at this QA Site. */
+  qaSite?: QaSite;
 };
 
 /** Jira-ready plain text. */
-export function renderQaSteps(bundle: QaRunBundle): string {
-  return new TextRenderer().render(QaInstructionsView.from(bundle));
+export function renderQaSteps(
+  bundle: QaRunBundle,
+  options: RenderOptions = {},
+): string {
+  return new TextRenderer().render(
+    QaInstructionsView.from(bundle, { qaSite: options.qaSite }),
+  );
 }
 
 /** PR-ready Markdown with each Step Screenshot inline. */
@@ -36,7 +46,7 @@ export function renderMarkdown(
   options: RenderOptions = {},
 ): string {
   return new MarkdownRenderer(options.images).render(
-    QaInstructionsView.from(bundle),
+    QaInstructionsView.from(bundle, { qaSite: options.qaSite }),
   );
 }
 
@@ -46,7 +56,7 @@ export function renderHtml(
   options: RenderOptions = {},
 ): string {
   return new HtmlRenderer(options.images).render(
-    QaInstructionsView.from(bundle),
+    QaInstructionsView.from(bundle, { qaSite: options.qaSite }),
   );
 }
 
@@ -69,7 +79,7 @@ export function render(
 ): string {
   switch (format) {
     case 'qa-steps':
-      return renderQaSteps(bundle);
+      return renderQaSteps(bundle, options);
     case 'markdown':
       return renderMarkdown(bundle, options);
     case 'html':
