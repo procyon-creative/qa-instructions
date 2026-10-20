@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 // An ordinary Playwright test that types a password and an email address.
 // The password field is recognized from the page recorded in the trace; the
 // email address matches the `mask` pattern in playwright.config.ts. Neither
-// may appear in any QA Instructions output (see scripts/verify-run.mjs).
+// may appear in any QA Instructions output (see e2e/no-secrets.spec.ts).
 
 const EMAIL = 'tester@qa.example.com';
 const PASSWORD = 'correct-horse-battery-staple';

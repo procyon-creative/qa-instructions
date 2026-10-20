@@ -102,7 +102,9 @@ When needed (e.g. repo goes private or org minute limits bite):
 Before push (saves hosted/self-hosted cycles):
 
 ```bash
-pnpm verify   # examples/verification: test → render → golden probes
+pnpm verify   # every example's e2e: Playwright Test runs of the sample tests, then golden snapshots
 ```
 
 The examples serve the fixture site on port 4321. Set `FIXTURE_PORT` (e.g. `FIXTURE_PORT=4400 pnpm verify`) to run on another port, such as a second worktree's run alongside the first; goldens still compare against 4321.
+
+After an intended change, rewrite the goldens with `pnpm e2e --update-snapshots` in `examples/verification` or `examples/derived-steps`, and review the diff.

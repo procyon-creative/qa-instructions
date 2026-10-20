@@ -1,7 +1,7 @@
 import { test } from '@playwright/test';
 
 // The Playwright test that recorded `v8-smooth.zip` (Playwright 1.56, see
-// examples/derived-steps-1.56/scripts/record-fixtures.mjs): a long page that
+// examples/derived-steps-1.56/scripts/record-fixtures.ts): a long page that
 // scrolls smoothly (`scroll-behavior: smooth`), with a form far below the
 // fold, as on a store's product page.
 //

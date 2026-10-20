@@ -1,7 +1,7 @@
 import { test } from '@playwright/test';
 
 // The Playwright test that recorded `v8-scroll.zip` (Playwright 1.56, see
-// examples/derived-steps-1.56/scripts/record-fixtures.mjs): a long page on
+// examples/derived-steps-1.56/scripts/record-fixtures.ts): a long page on
 // which Playwright scrolls before acting.
 //
 // The page is green with a yellow band far below the top. In the band, the

@@ -3,15 +3,16 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./origin": "./origin.mjs"
+    "./origin": "./origin.ts"
   },
   "scripts": {
     "dev": "astro dev --host 127.0.0.1 --port ${FIXTURE_PORT:-4321}",
-    "build": "astro build",
+    "build": "astro build && tsc -p tsconfig.json",
     "preview": "astro preview --host 127.0.0.1 --port ${FIXTURE_PORT:-4321}",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.ts"
   },
   "devDependencies": {
+    "@types/node": "^26.6.2",
     "astro": "^5.7.0"
   }
 }

@@ -6,7 +6,7 @@ const baseURL = fixtureOrigin.url;
 // As in derived-steps: the test accounts' email addresses are secrets too.
 const mask = [/[\w.+-]+@qa\.example\.com/];
 
-// The derived-steps tests (copied into ./tests by scripts/sync-specs.mjs),
+// The derived-steps tests (copied into ./tests by scripts/sync-specs.ts),
 // run on Playwright 1.56: step details come from step titles and Step
 // Screenshots from the trace's screen recording.
 export default defineConfig({

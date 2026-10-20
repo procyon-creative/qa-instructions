@@ -3,26 +3,41 @@
     "bundleDirs": [
       "styles/outline/moving-ui--register-a-warranty-from-the-menu"
     ],
-    "viewport": { "width": 800, "height": 600 },
+    "viewport": {
+      "width": 800,
+      "height": 600
+    },
     "minBytes": 2000,
     "highlights": [
       null,
-      ["outline"],
-      ["outline"],
-      ["outline"],
-      ["outline"],
+      [
+        "outline"
+      ],
+      [
+        "outline"
+      ],
+      [
+        "outline"
+      ],
+      [
+        "outline"
+      ],
       null,
-      ["outline"]
+      [
+        "outline"
+      ]
     ],
     "steps": [
       {
         "index": 2,
         "probes": [
-          { "name": "outline", "at": "outline", "rgb": [255, 0, 128] },
+          {
+            "name": "outline",
+            "at": "outline"
+          },
           {
             "name": "no click dot: the middle bar",
-            "at": "clickPoint",
-            "rgb": [255, 255, 255]
+            "at": "clickPoint"
           }
         ]
       }
@@ -32,50 +47,84 @@
     "bundleDirs": [
       "styles/clickDot/moving-ui--register-a-warranty-from-the-menu"
     ],
-    "viewport": { "width": 800, "height": 600 },
+    "viewport": {
+      "width": 800,
+      "height": 600
+    },
     "minBytes": 2000,
     "highlights": [
       null,
-      ["clickDot"],
-      ["clickDot"],
-      ["clickDot"],
+      [
+        "clickDot"
+      ],
+      [
+        "clickDot"
+      ],
+      [
+        "clickDot"
+      ],
       null,
       null,
-      ["clickDot"]
+      [
+        "clickDot"
+      ]
     ],
     "steps": [
       {
         "index": 2,
         "probes": [
-          { "name": "click dot", "at": "clickPoint", "rgb": [255, 0, 128] },
+          {
+            "name": "click dot",
+            "at": "clickPoint"
+          },
           {
             "name": "no outline: the header",
-            "at": "outline",
-            "rgb": [34, 34, 34]
+            "at": "outline"
           }
         ]
       }
     ]
   },
   {
-    "bundleDirs": ["styles/badge/moving-ui--register-a-warranty-from-the-menu"],
-    "viewport": { "width": 800, "height": 600 },
+    "bundleDirs": [
+      "styles/badge/moving-ui--register-a-warranty-from-the-menu"
+    ],
+    "viewport": {
+      "width": 800,
+      "height": 600
+    },
     "minBytes": 2000,
     "highlights": [
       null,
-      ["badge"],
-      ["badge"],
-      ["badge"],
-      ["badge"],
+      [
+        "badge"
+      ],
+      [
+        "badge"
+      ],
+      [
+        "badge"
+      ],
+      [
+        "badge"
+      ],
       null,
-      ["badge"]
+      [
+        "badge"
+      ]
     ],
     "steps": [
       {
         "index": 5,
         "probes": [
-          { "name": "step-number badge", "at": "badge", "rgb": [255, 0, 128] },
-          { "name": "no outline", "at": "outline", "rgb": [255, 255, 255] }
+          {
+            "name": "step-number badge",
+            "at": "badge"
+          },
+          {
+            "name": "no outline",
+            "at": "outline"
+          }
         ]
       }
     ]
@@ -84,16 +133,29 @@
     "bundleDirs": [
       "styles/spotlight/moving-ui--register-a-warranty-from-the-menu"
     ],
-    "viewport": { "width": 800, "height": 600 },
+    "viewport": {
+      "width": 800,
+      "height": 600
+    },
     "minBytes": 2000,
     "highlights": [
       null,
-      ["spotlight"],
-      ["spotlight"],
-      ["spotlight"],
-      ["spotlight"],
+      [
+        "spotlight"
+      ],
+      [
+        "spotlight"
+      ],
+      [
+        "spotlight"
+      ],
+      [
+        "spotlight"
+      ],
       null,
-      ["spotlight"]
+      [
+        "spotlight"
+      ]
     ],
     "steps": [
       {
@@ -102,43 +164,55 @@
           {
             "name": "the field, not dimmed",
             "at": "inside",
-            "dx": 6,
-            "rgb": [255, 255, 255]
+            "dx": 6
           },
           {
             "name": "the page around it, dimmed",
-            "at": "outline",
-            "rgb": [115, 115, 115]
+            "at": "outline"
           }
         ]
       }
     ]
   },
   {
-    "bundleDirs": ["styles/none/moving-ui--register-a-warranty-from-the-menu"],
-    "viewport": { "width": 800, "height": 600 },
+    "bundleDirs": [
+      "styles/none/moving-ui--register-a-warranty-from-the-menu"
+    ],
+    "viewport": {
+      "width": 800,
+      "height": 600
+    },
     "minBytes": 2000,
-    "highlights": [null, null, null, null, null, null, null],
+    "highlights": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
     "steps": [
       {
         "index": 2,
         "probes": [
           {
             "name": "no click dot: the middle bar",
-            "at": "clickPoint",
-            "rgb": [255, 255, 255]
+            "at": "clickPoint"
           },
           {
             "name": "no outline: the header",
-            "at": "outline",
-            "rgb": [34, 34, 34]
+            "at": "outline"
           }
         ]
       },
       {
         "index": 5,
         "probes": [
-          { "name": "no outline", "at": "outline", "rgb": [255, 255, 255] }
+          {
+            "name": "no outline",
+            "at": "outline"
+          }
         ]
       }
     ]

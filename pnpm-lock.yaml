@@ -56,9 +56,15 @@ importers:
       '@procyon-creative/qa-instructions':
         specifier: workspace:*
         version: link:../../packages/qa-instructions
+      '@qa-instructions/e2e-kit':
+        specifier: workspace:*
+        version: link:../e2e-kit
       '@qa-instructions/fixture-site':
         specifier: workspace:*
         version: link:../fixture-site
+      '@types/node':
+        specifier: ^26.6.2
+        version: 26.6.2
       sharp:
         specifier: ^0.35.4
         version: 0.35.4(@types/node@26.6.2)
@@ -71,15 +77,31 @@ importers:
       '@procyon-creative/qa-instructions':
         specifier: workspace:*
         version: link:../../packages/qa-instructions
+      '@qa-instructions/e2e-kit':
+        specifier: workspace:*
+        version: link:../e2e-kit
       '@qa-instructions/fixture-site':
         specifier: workspace:*
         version: link:../fixture-site
+      '@types/node':
+        specifier: ^26.6.2
+        version: 26.6.2
+
+  examples/e2e-kit:
+    dependencies:
       sharp:
         specifier: ^0.35.4
         version: 0.35.4(@types/node@26.6.2)
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.2
+        version: 26.6.2
 
   examples/fixture-site:
     devDependencies:
+      '@types/node':
+        specifier: ^26.6.2
+        version: 26.6.2
       astro:
         specifier: ^5.7.0
         version: 5.18.2(@types/node@26.6.2)(jiti@2.6.1)(rollup@4.63.1)(typescript@6.0.3)(yaml@2.9.0)
@@ -92,9 +114,15 @@ importers:
       '@procyon-creative/qa-instructions':
         specifier: workspace:*
         version: link:../../packages/qa-instructions
+      '@qa-instructions/e2e-kit':
+        specifier: workspace:*
+        version: link:../e2e-kit
       '@qa-instructions/fixture-site':
         specifier: workspace:*
         version: link:../fixture-site
+      '@types/node':
+        specifier: ^26.6.2
+        version: 26.6.2
 
   packages/qa-instructions:
     dependencies:

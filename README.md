@@ -362,11 +362,13 @@ One published package, `@procyon-creative/qa-instructions` (`packages/qa-instruc
 
 ## CI
 
-E2E on `main` runs the verification and derived-steps examples (local fixture site + golden checks), including the derived-steps tests on Playwright 1.56:
+E2E on `main` runs the verification and derived-steps examples (local fixture site + golden checks), including the derived-steps tests on Playwright 1.56. Each example's `pnpm e2e` is a Playwright Test run: its `runs` project makes the sample runs, and its `verify` project (which depends on `runs`) checks their QA Reports against the goldens with `toMatchSnapshot`:
 
 ```bash
 pnpm verify
 ```
+
+After an intended change, `pnpm e2e --update-snapshots` in `examples/verification` or `examples/derived-steps` rewrites that example's golden files and image snapshots (the `golden/*.screenshots.json` expectations are written by hand and stay as they are; the 1.56 example compares with derived-steps' goldens and has none of its own).
 
 The 1.56 example needs its own browser build once: `cd examples/derived-steps-1.56 && pnpm exec playwright install chromium`. Its `pnpm record-fixtures` re-records the adapter's Playwright 1.56 and 1.63 step and trace fixtures.
 

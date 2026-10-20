@@ -3,20 +3,17 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "tsc -p tsconfig.json",
     "test": "playwright test",
     "test:2x": "playwright test --config playwright.2x.config.ts",
-    "test:variants": "node scripts/run-variants.mjs",
-    "test:failing": "node scripts/run-failing.mjs",
-    "verify": "node scripts/verify-run.mjs",
-    "verify:qa-site": "node scripts/verify-qa-site.mjs",
-    "verify:update-goldens": "node scripts/update-goldens.mjs",
-    "e2e:selection": "playwright test --config playwright.selection.config.ts && node scripts/verify-selection.mjs",
-    "e2e": "pnpm test && pnpm test:2x && pnpm test:variants && pnpm test:failing && pnpm verify && pnpm verify:qa-site && pnpm e2e:selection"
+    "e2e": "playwright test -c playwright.e2e.config.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@procyon-creative/qa-instructions": "workspace:*",
+    "@qa-instructions/e2e-kit": "workspace:*",
     "@qa-instructions/fixture-site": "workspace:*",
+    "@types/node": "^26.6.2",
     "sharp": "^0.35.4"
   }
 }

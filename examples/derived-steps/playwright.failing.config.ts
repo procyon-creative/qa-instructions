@@ -1,9 +1,9 @@
 import { defineConfig } from '@playwright/test';
 
-import base from './playwright.config';
+import base from './playwright.config.ts';
 
 // Tests in ./failing-tests fail on purpose. This run is expected to exit
-// non-zero; scripts/run-failing.mjs asserts that and keeps `pnpm e2e` green.
+// non-zero; the e2e `runs` project expects that and e2e/failing-run.spec.ts checks it.
 // Its own outputDir puts its QA Report in test-results/failing/qa-report/.
 export default defineConfig({
   ...base,

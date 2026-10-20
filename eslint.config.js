@@ -63,7 +63,6 @@ export default tseslint.config(
       '**/.astro/**',
       // The Pages site is its own npm project (docs-site/), not linted here.
       'docs-site/**',
-      'examples/**/scripts/**',
     ],
   },
 );

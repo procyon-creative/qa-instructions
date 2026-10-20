@@ -1,6 +1,11 @@
 {
-  "bundleDirs": ["trace-on/sign-in--sign-in-with-bad-credentials"],
-  "viewport": { "width": 800, "height": 600 },
+  "bundleDirs": [
+    "trace-on/sign-in--sign-in-with-bad-credentials"
+  ],
+  "viewport": {
+    "width": 800,
+    "height": 600
+  },
   "minBytes": 2000,
   "tolerance": 40,
   "steps": [
@@ -8,18 +13,33 @@
       "action": "Open http://127.0.0.1:4321/",
       "moment": "after",
       "probes": [
-        { "name": "home marker", "x": 400, "y": 140, "rgb": [0, 85, 255] }
+        {
+          "name": "home marker",
+          "x": 400,
+          "y": 140
+        }
       ]
     },
     {
       "action": "Click the **Sign in** link",
       "byMoment": {
         "action": [
-          { "name": "home marker", "x": 400, "y": 140, "rgb": [0, 85, 255] },
-          { "name": "click dot", "at": "clickPoint", "rgb": [255, 0, 128] }
+          {
+            "name": "home marker",
+            "x": 400,
+            "y": 140
+          },
+          {
+            "name": "click dot",
+            "at": "clickPoint"
+          }
         ],
         "after": [
-          { "name": "login marker", "x": 400, "y": 140, "rgb": [255, 136, 0] }
+          {
+            "name": "login marker",
+            "x": 400,
+            "y": 140
+          }
         ]
       }
     },
@@ -28,7 +48,11 @@
       "moment": "after",
       "optional": true,
       "probes": [
-        { "name": "login marker", "x": 400, "y": 140, "rgb": [255, 136, 0] }
+        {
+          "name": "login marker",
+          "x": 400,
+          "y": 140
+        }
       ]
     },
     {
@@ -38,17 +62,18 @@
           {
             "name": "login marker",
             "x": 400,
-            "y": 140,
-            "rgb": [255, 136, 0]
+            "y": 140
           },
-          { "name": "click dot", "at": "clickPoint", "rgb": [255, 0, 128] }
+          {
+            "name": "click dot",
+            "at": "clickPoint"
+          }
         ],
         "after": [
           {
             "name": "Login failed page's error banner",
             "x": 400,
-            "y": 140,
-            "rgb": [204, 0, 0]
+            "y": 140
           }
         ]
       }

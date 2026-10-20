@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "types": ["node"]
+  },
+  "include": [
+    "*.ts",
+    "e2e",
+    "scripts",
+    "../../packages/qa-instructions/test/playwright/fixtures/steps/step-dump-reporter.ts"
+  ]
+}
