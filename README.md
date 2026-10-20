@@ -69,6 +69,23 @@ Browse every test's QA Instructions from its `index.html`; paste a test's `qa-st
 
 With the trace setting on, each QA Step gets a Step Screenshot of the page at the moment of its Action, saved in the test's `assets/` and listed in the step's `assetIds`. The element acted on (`elementBox`), for clicks the click point (`clickPoint`), and the page's `viewport` are recorded on the step in CSS pixels. Without the setting, QA Steps are text only.
 
+### The `--trace` flag
+
+`npx playwright test --trace <mode>` sets only the trace mode. On 1.63+, when your config's `use.trace` is an object, Playwright keeps it and replaces just its `mode`; otherwise the flag gives a plain `trace: '<mode>'`. So on 1.63+ the flag cannot turn on per-action screenshots (`snapshots.screen`): with `--trace on` and no such config, each QA Step gets a frame of the trace's screen recording instead, as on 1.53–1.62. For a one-off run with them, without editing your config, put a small config next to it that spreads it and sets `use.trace`, for example `playwright.qa.config.js`:
+
+```js
+const base = require('./playwright.config.js');
+module.exports = {
+  ...base,
+  use: {
+    ...base.use,
+    trace: { mode: 'on', snapshots: { screen: true, dom: true } },
+  },
+};
+```
+
+and run it with `npx playwright test -c playwright.qa.config.js`. With a `playwright.config.ts`, write the same in a `.ts` file, with `import base from './playwright.config';` and `export default`.
+
 ### Setup mistakes
 
 Without the trace setting, QA Steps are text only, and the reporter prints one warning per run with the line to add for your Playwright version. The reporter never fails the test run: a setup mistake (such as an unusable `select`, which is then ignored) or an error inside it is printed once on stderr, and the tests' own results are unaffected.

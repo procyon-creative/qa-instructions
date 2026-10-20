@@ -21,6 +21,8 @@ export default defineConfig({
 });
 ```
 
+The `--trace <mode>` CLI flag sets only the trace mode, so it cannot turn on per-action screenshots (`snapshots.screen`); for a one-off run with them, use a small config that spreads yours and sets `use.trace` (see [The `--trace` flag](https://github.com/procyon-creative/qa-instructions#the---trace-flag)).
+
 Run your tests as usual. Every run leaves a QA Report in `test-results/qa-report/` (inside Playwright's `outputDir`): open `index.html` to browse every test's QA Instructions with screenshots, and paste each test's Jira-ready `qa-steps.txt` into its ticket. No second command is needed.
 
 Reporter options, the QA Report layout, and the `render` command are documented in the [project README](https://github.com/procyon-creative/qa-instructions#readme).
