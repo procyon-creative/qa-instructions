@@ -4,11 +4,12 @@
 
 `procyon-creative/qa-instructions` is **public**, so Linux hosted runners are free. CI and E2E use `ubuntu-latest` today.
 
-| Workflow                         | Runner          | When                      |
-| -------------------------------- | --------------- | ------------------------- |
-| `ci.yml`                         | `ubuntu-latest` | Every PR + push to `main` |
-| `e2e.yml`                        | `ubuntu-latest` | Every PR + push to `main` |
-| `jira.yml`, `release-please.yml` | `ubuntu-latest` | Events as configured      |
+| Workflow                         | Runner          | When                                                                                   |
+| -------------------------------- | --------------- | -------------------------------------------------------------------------------------- |
+| `ci.yml`                         | `ubuntu-latest` | Every PR + push to `main`                                                              |
+| `e2e.yml`                        | `ubuntu-latest` | Every PR + push to `main`                                                              |
+| `jira.yml`, `release-please.yml` | `ubuntu-latest` | Events as configured                                                                   |
+| `pages.yml`                      | `ubuntu-latest` | Pushes to `main` touching `docs-site/` (deploys); PRs touching it (build + check only) |
 
 ## Required checks
 
