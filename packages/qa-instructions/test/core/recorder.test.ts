@@ -357,6 +357,19 @@ test('each Action names the element as a tester sees it', () => {
   );
 });
 
+// Before 1.63, Playwright records a selectOption with no value at all
+// (the step title is just "Select option"), so there is nothing to name.
+test('a select with no recorded value still names an option choice', () => {
+  assert.deepEqual(
+    qaSteps({
+      type: 'action',
+      kind: 'select',
+      target: { by: 'role', role: 'combobox', name: 'Size' },
+    }),
+    [{ action: 'Choose an option in the **Size** dropdown' }],
+  );
+});
+
 test('test plumbing never becomes a QA Step', () => {
   assert.deepEqual(
     qaSteps(
