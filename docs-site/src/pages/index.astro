@@ -11,6 +11,7 @@ import StructPanel from "@procyon-creative/astro-theme/components/StructPanel.as
 import LinkCards from "@procyon-creative/astro-theme/components/LinkCards.astro";
 import LinkCard from "@procyon-creative/astro-theme/components/LinkCard.astro";
 import Footer from "@procyon-creative/astro-theme/components/Footer.astro";
+import pkg from "../../../packages/qa-instructions/package.json";
 
 const repo = "https://github.com/procyon-creative/qa-instructions";
 
@@ -79,7 +80,7 @@ const configSnippet = `<span class="dim">// playwright.config.ts</span>
       <span class="badge">Node ≥ 18</span>
     </Fragment>
 
-    <VersionAside slot="aside" version="v4.0.0">
+    <VersionAside slot="aside" version={`v${pkg.version}`}>
       Published to npm as <a href="https://www.npmjs.com/package/@procyon-creative/qa-instructions" class="text-neon-cyan underline underline-offset-2">@procyon-creative/qa-instructions</a>.<br />
       <a href={`${repo}/releases`} class="text-neon-cyan underline underline-offset-2">Releases →</a>
     </VersionAside>
