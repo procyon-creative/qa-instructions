@@ -840,23 +840,31 @@ async function markerPage(screenshot: Screenshot): Promise<string> {
   );
 }
 
+/** Each of a step's screenshots, as its moment and the page it shows. */
+function markerShots(
+  source: TraceScreenshotSource,
+): (ref: string) => Promise<string[]> {
+  return (ref) =>
+    Promise.all(
+      (source.capture(ref)?.screenshots ?? []).map(
+        async (s) => `${s.moment} ${await markerPage(s)}`,
+      ),
+    );
+}
+
 for (const [version, trace] of Object.entries(TRACE_ON)) {
   test(`trace format ${version} without per-action screenshots: each Action gets a frame of its own moment, as format 8 picks it`, async () => {
     const source = await TraceScreenshotSource.open(trace);
     assert.equal(source.problem, undefined);
-    const shots = async (ref: string) =>
-      Promise.all(
-        (source.capture(ref)?.screenshots ?? []).map(
-          async (s) => `${s.moment} ${await markerPage(s)}`,
-        ),
-      );
+    const shots = markerShots(source);
 
     // The home page as loaded: the last frame painted by the navigation's
     // end (none was painted after it before the click scrolled).
     assert.deepEqual(await shots(SIGN_IN_STEPS.OPEN), ['after home']);
     // The link click: no frame painted just before its input shows the page
-    // it met, so the last one painted after it, on the Sign in page.
-    assert.deepEqual(await shots(SIGN_IN_STEPS.SIGN_IN_LINK), ['after signIn']);
+    // it met, and none after it was painted PAINT_LAG after it logged its
+    // navigation before the fill, so none (QI-67).
+    assert.deepEqual(await shots(SIGN_IN_STEPS.SIGN_IN_LINK), []);
     // The fill, after its end, never a frame from before it marked with the
     // field's box: as before 1.63, only a click point marks the moment.
     assert.deepEqual(await shots(SIGN_IN_STEPS.FILL), ['after signIn']);
@@ -892,20 +900,65 @@ for (const [version, trace] of Object.entries(TRACE_ON)) {
           .join('\n'),
       );
     }
-    const source = await openEntries(entries);
-    const shots = async (ref: string) =>
-      Promise.all(
-        (source.capture(ref)?.screenshots ?? []).map(
-          async (s) => `${s.moment} ${await markerPage(s)}`,
-        ),
-      );
+    const shots = markerShots(await openEntries(entries));
     assert.deepEqual(await shots(SIGN_IN_STEPS.OPEN), ['after home']);
-    assert.deepEqual(await shots(SIGN_IN_STEPS.SIGN_IN_LINK), ['after signIn']);
     // Nothing shows the page had stopped scrolling after the fill.
     assert.deepEqual(await shots(SIGN_IN_STEPS.FILL), []);
-    assert.deepEqual(await shots(SIGN_IN_STEPS.SUBMIT), ['after loginFailed']);
+    // Each click's navigation is logged, so it is dated without snapshots
+    // too: every frame after either click was painted within PAINT_LAG of
+    // its navigation, so could still show the page it left (QI-67).
+    assert.deepEqual(await shots(SIGN_IN_STEPS.SIGN_IN_LINK), []);
+    assert.deepEqual(await shots(SIGN_IN_STEPS.SUBMIT), []);
   });
 }
+
+/**
+ * Plain `trace: 'on'` on Playwright 1.63 runs of the derived-steps sign-in
+ * test itself (examples/derived-steps/tests/sign-in.spec.ts, the `trace-on`
+ * variant), whose test plumbing between the two clicks adds steps: in
+ * `v9-on-link-stale.zip` (a CI run) no frame was painted between the Sign
+ * in link click's end and the `page.evaluate()` that follows, and the last
+ * one painted by its end, 39ms before it logged its navigation, shows the
+ * home page; in `v9-on-submit-stale.zip` (a local run under load) the only
+ * frames after the submit click were painted 5ms after it logged its
+ * navigation and still show the Sign in page. A navigating click gets only
+ * a frame painted at least PAINT_LAG after it logged its navigation.
+ */
+const DERIVED_SIGN_IN_STEPS = {
+  SIGN_IN_LINK: ActionRef.of(5, 'Click'),
+  SUBMIT: ActionRef.of(10, 'Click'),
+};
+
+test('trace format 9 without per-action screenshots: a click that navigated gets no frame painted before its new page could show', async () => {
+  const linkShots = markerShots(
+    await TraceScreenshotSource.open(fixture('v9-on-link-stale.zip')),
+  );
+  assert.deepEqual(await linkShots(DERIVED_SIGN_IN_STEPS.SIGN_IN_LINK), []);
+  assert.deepEqual(await linkShots(DERIVED_SIGN_IN_STEPS.SUBMIT), [
+    'action signIn',
+  ]);
+
+  const submitShots = markerShots(
+    await TraceScreenshotSource.open(fixture('v9-on-submit-stale.zip')),
+  );
+  assert.deepEqual(await submitShots(DERIVED_SIGN_IN_STEPS.SUBMIT), []);
+});
+
+test('trace format 8: a click that navigated keeps the frame it had before 1.63', async () => {
+  // Only from format 9 does a navigation date a click's frame: the CI trace,
+  // relabeled as format 8, gives the link click its last frame by its end.
+  const entries = unzipSync(await readFile(fixture('v9-on-link-stale.zip')));
+  for (const name of Object.keys(entries)) {
+    if (!name.endsWith('.trace')) continue;
+    entries[name] = strToU8(
+      strFromU8(entries[name]).replaceAll('"version":9', '"version":8'),
+    );
+  }
+  const shots = markerShots(await openEntries(entries));
+  assert.deepEqual(await shots(DERIVED_SIGN_IN_STEPS.SIGN_IN_LINK), [
+    'after home',
+  ]);
+});
 
 /** A frame of a sample trace's screen recording, by its file name. */
 async function recordedFrame(trace: string, file: string): Promise<Buffer> {

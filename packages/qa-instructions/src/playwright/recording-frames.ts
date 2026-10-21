@@ -30,6 +30,8 @@ export type RecordedCall = {
   inputTime?: number;
   /** Whether the call touched a point or element to mark (a click, not a fill). */
   marks: boolean;
+  /** When the call last logged that its page navigated; unknown if it did not. */
+  navigatedAt?: number;
   /**
    * When the next call on the page may first have changed it, or
    * `Infinity` if none did.
@@ -117,9 +119,21 @@ export class RecordingFrames {
    * still easing in, or not yet recorded, gets none. Either way the frame
    * must be painted at least PAINT_LAG after the fill's scroll was recorded
    * (see `afterTyping`).
+   *
+   * A call that navigated its page gets only a frame painted at least
+   * PAINT_LAG after it logged the navigation, or none: the browser keeps
+   * the old page on screen until the new one paints, so a frame painted by
+   * the call's end, or just after it, may show the page it left.
    */
   afterAction(call: RecordedCall): ScreencastFrame | undefined {
-    const { pageId, nextChange } = call;
+    const { pageId, nextChange, navigatedAt } = call;
+    if (navigatedAt !== undefined) {
+      return this.screencast.lastPaintedBetween(
+        pageId,
+        navigatedAt + PAINT_LAG,
+        nextChange,
+      );
+    }
     const end = call.endTime ?? call.startTime;
     if (end === undefined) return undefined;
     const typed = call.inputSnapshot !== undefined && !call.marks;

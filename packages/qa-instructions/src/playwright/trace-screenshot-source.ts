@@ -88,6 +88,19 @@ const SCROLL_LOG = /scrolling into view/;
 const MOVING_LOG = /element is not stable/;
 const STILL_LOG = /element is visible, enabled and stable/;
 
+/**
+ * The log line an Action writes when its page navigated while it waited for
+ * the navigations it scheduled (a link click, a form submit).
+ */
+const NAVIGATED_LOG = /^\s*navigated to /;
+
+/**
+ * The first trace format (Playwright 1.63) whose navigating Actions are
+ * dated by that log line, so their screen recording frame waits for the new
+ * page (QI-67). Version 8 (1.53–1.62) keeps the frames it had (ADR 0001).
+ */
+const NAVIGATION_DATED_FROM = 9;
+
 /** One such check: when it was logged and whether the element was still. */
 type StabilityCheck = { time: number; still: boolean };
 
@@ -117,6 +130,8 @@ type CallRecord = {
   endTime?: number;
   /** When the call logged that it began scrolling to its element. */
   scrollTime?: number;
+  /** When the call last logged that its page navigated. */
+  navigatedAt?: number;
   box?: QaBox;
   point?: QaPoint;
   /** The stability checks the call logged, in the order logged. */
@@ -157,6 +172,8 @@ class TraceCalls {
   private viewport?: QaSize;
   /** The context's wall-clock time minus its trace-clock time. */
   private wallClockOffset?: number;
+  /** Whether the context's trace format dates a call's navigation. */
+  private datesNavigation = false;
   /** The recording's page, when it recorded just one. */
   private readonly onlyPage?: string;
 
@@ -164,6 +181,7 @@ class TraceCalls {
     for (const events of contexts) {
       this.viewport = undefined;
       this.wallClockOffset = undefined;
+      this.datesNavigation = false;
       for (const event of events) this.add(event);
     }
     this.onlyPage = this.screencast.onlyPage();
@@ -189,6 +207,7 @@ class TraceCalls {
       // From 1.63 a fill's input also carries its field's box, measured
       // before its focus scrolls the page; only a click has a point.
       marks: record.point !== undefined,
+      navigatedAt: record.navigatedAt,
       nextChange,
       changedPage: this.pageChanged(record),
       settledAt: this.settledAt(record, nextChange),
@@ -353,7 +372,9 @@ class TraceCalls {
     if (event.type === 'context-options') {
       const options = this.isRecord(event.options) ? event.options : {};
       this.viewport = this.size(options.viewport);
-      const { wallTime, monotonicTime } = event;
+      const { wallTime, monotonicTime, version } = event;
+      this.datesNavigation =
+        typeof version === 'number' && version >= NAVIGATION_DATED_FROM;
       this.wallClockOffset =
         typeof wallTime === 'number' &&
         typeof monotonicTime === 'number' &&
@@ -398,17 +419,10 @@ class TraceCalls {
         this.record(callId).endTime = this.number(event.endTime);
         break;
       case 'log': {
-        const record = this.record(callId);
         const time = this.number(event.time);
-        if (
-          time !== undefined &&
-          record.scrollTime === undefined &&
-          typeof event.message === 'string' &&
-          SCROLL_LOG.test(event.message)
-        ) {
-          record.scrollTime = time;
+        if (time !== undefined && typeof event.message === 'string') {
+          this.addLog(this.record(callId), time, event.message);
         }
-        this.addStabilityCheck(record, time, event.message);
         break;
       }
       case 'input':
@@ -471,13 +485,26 @@ class TraceCalls {
     }
   }
 
+  /**
+   * Keeps what a call's log line dates: the start of its scroll to its
+   * element, its page's navigation, or a stability check.
+   */
+  private addLog(record: CallRecord, time: number, message: string): void {
+    if (record.scrollTime === undefined && SCROLL_LOG.test(message)) {
+      record.scrollTime = time;
+    }
+    if (this.datesNavigation && NAVIGATED_LOG.test(message)) {
+      record.navigatedAt = time;
+    }
+    this.addStabilityCheck(record, time, message);
+  }
+
   /** Keeps a call's log line if it reports a stability check. */
   private addStabilityCheck(
     record: CallRecord,
-    time: number | undefined,
-    message: unknown,
+    time: number,
+    message: string,
   ): void {
-    if (time === undefined || typeof message !== 'string') return;
     const still = STILL_LOG.test(message);
     if (!still && !MOVING_LOG.test(message)) return;
     record.stabilityChecks.push({ time, still });
