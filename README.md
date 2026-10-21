@@ -90,6 +90,8 @@ and run it with `npx playwright test -c playwright.qa.config.js`. With a `playwr
 
 Without the trace setting, QA Steps are text only, and the reporter prints one warning per run with the line to add for your Playwright version. The reporter never fails the test run: a setup mistake (such as an unusable `select`, which is then ignored) or an error inside it is printed once on stderr, and the tests' own results are unaffected.
 
+The library that draws Highlights (sharp) ships a native binary for the platform it was installed on. Installing dependencies inside a container (Lando, Docker) and running Playwright on the host then fails while loading the reporter, with sharp's `Could not load the sharp module using the darwin-arm64 runtime` error. Install dependencies where the tests run, or reinstall sharp for that platform: `npm install --os=darwin --cpu=arm64 sharp` on an Apple-silicon Mac (swap the flags for your host).
+
 ## Reporter options
 
 The second element of the reporter entry in `playwright.config.ts`.
