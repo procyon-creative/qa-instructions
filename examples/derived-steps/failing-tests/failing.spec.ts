@@ -39,6 +39,8 @@ test('Sign in despite failed soft checks', async ({ page }) => {
   await expect
     .soft(page.getByLabel('Username'), 'typed username')
     .toHaveValue('someone-else');
+  // Two soft checks fail on this step: each is marked where it sits.
+  await expect.soft(page).toHaveTitle('Dashboard');
   await page.getByRole('link', { name: 'Submit good credentials' }).click();
   await expect(page.getByTestId('welcome-message')).toHaveText(
     'Logged in as demo-user',

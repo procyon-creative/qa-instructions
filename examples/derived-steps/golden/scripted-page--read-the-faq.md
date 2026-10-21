@@ -2,6 +2,8 @@
 
 1. Open http://127.0.0.1:4321/faq
 
+   **Expected:** (1 unworded check left out)
+
    ![Step 1: Open http://127.0.0.1:4321/faq](assets/step-01.png)
 
 2. **Warning:** The test opened the **Shipping** and **Returns** sections with a script instead of a user action. Click each one to open it if it is closed.

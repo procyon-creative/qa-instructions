@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'">
+<title>Review the account profile</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #1f2328;
+  --muted: #59636e;
+  --border: #d1d9e0;
+  --code-bg: #eff1f3;
+  --note-bg: #ddf4ff;
+  --note-border: #0969da;
+  --warn-bg: #fff8c5;
+  --warn-border: #9a6700;
+  --fail: #d1242f;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --fg: #e6edf3;
+    --muted: #9198a1;
+    --border: #3d444d;
+    --code-bg: #262c36;
+    --note-bg: #121d2f;
+    --note-border: #4493f8;
+    --warn-bg: #272115;
+    --warn-border: #d29922;
+    --fail: #f85149;
+  }
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+main {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+}
+section {
+  margin-top: 1.5rem;
+}
+code {
+  background: var(--code-bg);
+  border-radius: 4px;
+  padding: 0.1em 0.3em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+.note {
+  background: var(--note-bg);
+  border-left: 4px solid var(--note-border);
+  padding: 0.5rem 1rem;
+}
+ol {
+  padding-left: 2rem;
+}
+li {
+  margin: 0 0 1.5rem;
+  padding-left: 0.5rem;
+}
+li p {
+  margin: 0 0 0.5rem;
+}
+li.warning {
+  background: var(--warn-bg);
+  border-left: 4px solid var(--warn-border);
+  padding: 0.5rem;
+}
+li.failed {
+  border-left: 4px solid var(--fail);
+}
+.approximate {
+  color: var(--muted);
+}
+.failed-here {
+  color: var(--fail);
+}
+figure {
+  margin: 0.5rem 0 0;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+</style>
+</head>
+<body>
+<main>
+<h1>Review the account profile</h1>
+<ol start="1">
+<li>
+<p>Open http://127.0.0.1:4321/profile</p>
+<figure><img src="data:image/png;base64,…" alt="Step 1: Open http://127.0.0.1:4321/profile"></figure>
+</li>
+</ol>
+<section>
+<h2>Profile card</h2>
+<ol start="2">
+<li>
+<p>Look at the <strong>Profile</strong> card</p>
+<p><strong>Expected:</strong> It contains <strong>user@example.com</strong>; the term in the <strong>Profile</strong> section shows <strong>Name:, Email:</strong>; the definition in the <strong>Profile</strong> section appears <strong>2</strong> times; one value reads <strong>user@example.com</strong>; value 1 sits level with its label; (1 unworded check left out)</p>
+</li>
+</ol>
+</section>
+<section>
+<h2>Details card</h2>
+<ol start="3">
+<li>
+<p>Look at the <strong>Details</strong> card</p>
+<p><strong>Expected:</strong> It contains <strong>US West</strong>; the term in the <strong>Details</strong> section shows <strong>Plan:, Region:</strong>; the definition in the <strong>Details</strong> section appears <strong>2</strong> times; one value reads <strong>US West</strong>; value 1 sits level with its label; (1 unworded check left out)</p>
+<figure><figcaption>Result</figcaption><img src="data:image/png;base64,…" alt="Step 3 result: It contains US West; the term in the Details section shows Plan:, Region:; the definition in the Details section appears 2 times; one value reads US West; value 1 sits level with its label; (1 unworded check left out)"></figure>
+</li>
+</ol>
+</section>
+</main>
+</body>
+</html>

@@ -1,4 +1,4 @@
-import type { ElementTarget } from '../core/index.js';
+import type { ElementTarget, FilteredElementTarget } from '../core/index.js';
 
 import { CssHint } from './css-hint.js';
 
@@ -20,17 +20,23 @@ const ENGINE = /^[a-z][\w:-]*$/i;
  * `#purchase_1174 >> internal:role=button[name="Purchase"i] >> nth=0`, and
  * returns the element it ends on as a neutral ElementTarget: the same one
  * LocatorParser gives for the locator that made it. Parts that only narrow
- * the match (`nth=`, `visible=`, `internal:has-text=`) name nothing.
+ * the match (`nth=`, `visible=`) name nothing; an `internal:has-text=`
+ * part is the filter a `filter({ hasText })` wrote, and is kept.
  */
 export class SelectorParser {
   constructor(private readonly css = new CssHint()) {}
 
-  parse(selector: string | undefined): ElementTarget | undefined {
+  parse(selector: string | undefined): FilteredElementTarget | undefined {
     if (!selector) return undefined;
     const parts = this.split(selector);
     for (let i = parts.length - 1; i >= 0; i -= 1) {
       const target = this.toTarget(parts[i]);
-      if (target) return target;
+      if (!target) continue;
+      const filter = parts.find((part) =>
+        part.startsWith('internal:has-text='),
+      );
+      const hasText = filter && this.value(this.engine(filter).body);
+      return hasText === undefined ? target : { ...target, hasText };
     }
     return undefined;
   }

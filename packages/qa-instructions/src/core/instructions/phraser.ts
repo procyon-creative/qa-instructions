@@ -173,6 +173,18 @@ export class StepPhraser {
   }
 
   /**
+   * The "do this" sentence for a group of the test's own that only checks
+   * things: the tester looks the group's subject over, and the checks say
+   * what to confirm.
+   */
+  group(title: string): string {
+    const words = title.trim().split(/\s+/);
+    if (words.length === 1) return `Look at the ${this.emphasize(title)}`;
+    const last = words.pop() as string;
+    return `Look at the ${this.emphasize(words.join(' '))} ${last}`;
+  }
+
+  /**
    * The warning a tester reads where the test changed the page with a
    * script instead of a user action.
    */
@@ -233,12 +245,18 @@ export class StepPhraser {
   /**
    * The "you should see" phrase for a check, starting lowercase so several
    * can be joined. Undefined when a tester could not see what was checked.
+   * In a look-at step (a group of the test's that only checks things), an
+   * element no one can name is "it": the step has just said what to look at.
    */
-  check(event: CheckEvent, recorded: RecordedFacts = {}): string | undefined {
+  check(
+    event: CheckEvent,
+    recorded: RecordedFacts = {},
+    lookAt = false,
+  ): string | undefined {
     // A check the runner could not trace to the page (e.g. a locator held
     // in a variable) is still about an element if the page recorded one.
     if (event.subject === 'value' && recorded.element) {
-      return this.check({ ...event, subject: 'element' }, recorded);
+      return this.check({ ...event, subject: 'element' }, recorded, lookAt);
     }
 
     if (event.expected === undefined && event.expectedPattern) {
@@ -247,10 +265,10 @@ export class StepPhraser {
 
     if (event.subject === 'value') {
       const wording = VALUE_CHECKS[event.matcher];
-      if (!wording || !event.description || event.expected === undefined) {
-        return undefined;
-      }
-      return `${this.emphasize(event.description)} ${this.fill(wording, event)}`;
+      if (!wording || !event.description) return undefined;
+      // The message is what the tester confirms; the expected value is
+      // often one the test computed, which no tester could repeat.
+      return this.clause(event.description);
     }
 
     if (event.subject === 'page') {
@@ -260,11 +278,14 @@ export class StepPhraser {
     }
 
     const wording = ELEMENT_CHECKS[event.matcher];
-    const subject = this.checkedElement(event, recorded);
-    if (!wording || !subject) return undefined;
+    const filtered = this.filteredCount(event);
+    if (filtered) return filtered;
+    const checked = this.checkedElement(event, recorded);
+    if (!wording || !checked) return undefined;
     if (wording.positive.includes('%v') && event.expected === undefined) {
       return undefined;
     }
+    const subject = lookAt && checked === 'the page' ? 'it' : checked;
     return `${subject} ${this.fill(wording, event)}`;
   }
 
@@ -294,6 +315,27 @@ export class StepPhraser {
     const wording = plain ? CONTAINS : MATCHES;
     const template = event.negated ? wording.negative : wording.positive;
     return `${subject} ${template.replace('%v', this.emphasize(text))}`;
+  }
+
+  /**
+   * A count of the elements a `filter({ hasText })` narrowed the locator
+   * to: what a tester checks is that one value reads the text, not how
+   * many elements the page holds. Undefined for any other check.
+   */
+  private filteredCount(event: CheckEvent): string | undefined {
+    const { hasText } = event.target ?? {};
+    if (
+      event.matcher !== 'toHaveCount' ||
+      event.negated ||
+      hasText === undefined ||
+      event.expected === undefined
+    ) {
+      return undefined;
+    }
+    const text = this.emphasize(hasText);
+    return event.expected === '1'
+      ? `one value reads ${text}`
+      : `${event.expected} values read ${text}`;
   }
 
   /**
@@ -389,6 +431,16 @@ export class StepPhraser {
         : `the ${this.emphasize(name)} ${noun}`;
     }
     return noun && `the ${noun}`;
+  }
+
+  /**
+   * The author's message as a clause in a list of checks: "Value 1 sits
+   * level with its label" starts lowercase there, as the other checks do.
+   */
+  private clause(message: string): string {
+    return /^[A-Z][a-z]/.test(message)
+      ? message.charAt(0).toLowerCase() + message.slice(1)
+      : message;
   }
 
   private fill(wording: CheckWording, event: CheckEvent): string {

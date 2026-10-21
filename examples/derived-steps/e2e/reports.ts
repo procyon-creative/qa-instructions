@@ -87,6 +87,7 @@ export const GOLDENS: Golden[] = [
       ['', 'scripted-page--read-the-faq'],
       ['', 'grouped--sign-in-with-good-credentials'],
       ['', 'scripted-page--subscribe-to-the-newsletter'],
+      ['', 'profile--review-the-account-profile'],
       ['failing', 'failing--sign-in-shows-the-wrong-user'],
     ] as const
   ).flatMap(([folder, name]) =>
@@ -120,6 +121,9 @@ export const GOLDENS: Golden[] = [
   text('moving-ui--register-a-warranty-from-the-menu'),
   // Checks with the author's messages, on values read into variables.
   text('cart--add-credits-to-the-cart'),
+  // Groups of the test's own that only check the page: each is a Section
+  // with one "Look at the …" step.
+  text('profile--review-the-account-profile'),
   // A field and button far below the fold: Playwright scrolls to each.
   text('long-page--order-boots-from-the-bottom-of-the-page'),
   // A form below the fold on a smoothly scrolling page.

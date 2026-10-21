@@ -165,8 +165,7 @@ test('Playwright 1.56 with a trace reads checks on variables and computed values
       },
       {
         action: 'Open http://127.0.0.1:4321/cart',
-        expected:
-          '**cart line-item quantity** is **3**; **cart subtotal (qty × unit price)** is **15**',
+        expected: 'Cart line-item quantity; cart subtotal (qty × unit price)',
       },
     ],
   );
@@ -175,10 +174,13 @@ test('Playwright 1.56 with a trace reads checks on variables and computed values
 test('Playwright 1.56 without a trace reads checks from the source only, as before', async () => {
   const steps = qaSteps(await bundleFrom('1.56', 'add-credits-to-the-cart'));
   // `expect(qtyInput).toHaveValue(String(QTY))`: neither the element nor
-  // the value is written in the source.
-  assert.equal(steps[1].expected, undefined);
-  // `toBeCloseTo(QTY * UNIT_PRICE, 2)`: a computed value.
-  assert.equal(steps[3].expected, '**cart line-item quantity** is **3**');
+  // the value is written in the source, so the check is counted as left out.
+  assert.equal(steps[1].expected, '(1 unworded check left out)');
+  // `toBeCloseTo(QTY * UNIT_PRICE, 2)`: a computed value; each message alone.
+  assert.equal(
+    steps[3].expected,
+    'Cart line-item quantity; cart subtotal (qty × unit price)',
+  );
 });
 
 test("checks titled with the author's message are Expected Results named by the message", async () => {
@@ -201,8 +203,7 @@ test("checks titled with the author's message are Expected Results named by the 
       },
       {
         action: 'Open http://127.0.0.1:4321/cart',
-        expected:
-          '**cart line-item quantity** is **3**; **cart subtotal (qty × unit price)** is **15**',
+        expected: 'Cart line-item quantity; cart subtotal (qty × unit price)',
       },
     ],
   );
@@ -255,7 +256,8 @@ test('Playwright 1.56 step titles and call sites give full QA Steps', async () =
       },
       {
         action: 'Click the **Sign in** link',
-        expected: 'The page title is **Sign in**; **Username** is empty',
+        expected:
+          'The page title is **Sign in**; **Username** is empty; (1 unworded check left out)',
       },
       {
         action:
@@ -266,7 +268,7 @@ test('Playwright 1.56 step titles and call sites give full QA Steps', async () =
       {
         action: 'Click the **Submit bad credentials** button',
         expected:
-          '**Invalid credentials** is visible; the **Login failed** heading is visible',
+          '**Invalid credentials** is visible; the **Login failed** heading is visible; (1 unworded check left out)',
       },
       { action: 'Press **Tab**', expected: undefined },
     ],

@@ -85,21 +85,38 @@ export class QaInstructionsView {
     );
   }
 
-  /** Where an incomplete test stopped, or where its first soft check failed. */
+  /** Where an incomplete test stopped, or where its soft checks failed. */
   private static incompleteNote(steps: QaStep[]): string {
     const failing = steps.find((step) => step.failed);
-    const checkFailing = steps.find((step) => step.checkFailed);
+    const checkFailing = steps.filter((step) => step.checkFailedCount);
     const last = steps.at(-1);
+    const count = checkFailing.reduce(
+      (n, step) => n + (step.checkFailedCount ?? 0),
+      0,
+    );
     if (failing) {
       return `the test failed at step ${failing.index}, so any later steps are missing.`;
     }
-    if (checkFailing) {
-      return `a check failed at step ${checkFailing.index}; the test went on, so the later steps are all here.`;
+    if (count === 1) {
+      return `a check failed at step ${checkFailing[0].index}; the test went on, so the later steps are all here.`;
+    }
+    if (count > 1) {
+      const where = QaInstructionsView.list(
+        checkFailing.map((step) => step.index),
+      );
+      return `${count} checks failed (steps ${where}); the test went on, so the later steps are all here.`;
     }
     if (last) {
       return `the test failed after step ${last.index}, so any later steps are missing.`;
     }
     return 'the test failed before its first step.';
+  }
+
+  /** Step numbers joined as a person writes them: `3 and 4`, `3, 4, and 5`. */
+  private static list(numbers: number[]): string {
+    const said = numbers.map(String);
+    if (said.length <= 2) return said.join(' and ');
+    return `${said.slice(0, -1).join(', ')}, and ${said[said.length - 1]}`;
   }
 
   private static sectionRuns(
@@ -148,9 +165,13 @@ export class QaInstructionsView {
       link: qaSite && url && action === `Open ${url}` ? url : undefined,
       warning: step.warning ?? false,
       approximate: step.approximate ?? false,
+      // A failed soft check is marked where it sits in the Expected
+      // Result; the step is marked only when none of them could say so
+      // (every one was left out).
       failure: step.failed
         ? QaWording.failed
-        : step.checkFailed
+        : step.checkFailedCount &&
+            !step.expected?.includes(QaWording.checkFailed)
           ? QaWording.checkFailed
           : undefined,
       screenshot: asset

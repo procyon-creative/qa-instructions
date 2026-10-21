@@ -41,8 +41,11 @@ export type QaStep = {
   section?: string[];
   /** True on the QA Step where the test failed. */
   failed?: boolean;
-  /** A soft check in the step's Expected Result failed; the test went on. */
-  checkFailed?: boolean;
+  /**
+   * How many of the step's soft checks failed; the test went on, so the
+   * later QA Steps are all here.
+   */
+  checkFailedCount?: number;
   /** The test changed the page by script here; the tester may need to act by hand. Has no Highlight. */
   warning?: boolean;
   /** The Action was forced past the runner's usual checks; its Highlight may not line up. */

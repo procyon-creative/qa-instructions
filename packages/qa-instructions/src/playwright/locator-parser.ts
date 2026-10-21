@@ -1,4 +1,4 @@
-import type { ElementTarget } from '../core/index.js';
+import type { ElementTarget, FilteredElementTarget } from '../core/index.js';
 
 import { CssHint } from './css-hint.js';
 
@@ -30,13 +30,20 @@ const RECEIVER = /^(?:[A-Za-z_$][\w$]*\s*\??\.\s*)+(?=[A-Za-z_$][\w$]*\s*\()/;
 export class LocatorParser {
   constructor(private readonly css = new CssHint()) {}
 
-  parse(locator: string | undefined): ElementTarget | undefined {
+  parse(locator: string | undefined): FilteredElementTarget | undefined {
     if (!locator) return undefined;
 
     const calls = this.splitCalls(locator.replace(RECEIVER, ''));
     for (let i = calls.length - 1; i >= 0; i -= 1) {
       const target = this.toTarget(calls[i]);
-      if (target) return target;
+      if (!target) continue;
+      // A chain may carry several filters (`filter({ has })`,
+      // `filter({ hasText })`); the text one is what a tester can read.
+      const hasText = calls
+        .filter(({ name }) => name === 'filter')
+        .map(({ args }) => this.namedOption(args, 'hasText'))
+        .find((text) => text !== undefined);
+      return hasText === undefined ? target : { ...target, hasText };
     }
     return undefined;
   }

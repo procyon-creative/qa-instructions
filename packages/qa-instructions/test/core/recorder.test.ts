@@ -173,7 +173,9 @@ test('incomplete QA Instructions say where the test failed', () => {
 });
 
 const softFailedSteps = (bundle: QaRunBundle) =>
-  bundle.steps.filter((step) => step.checkFailed).map((step) => step.index);
+  bundle.steps
+    .filter((step) => step.checkFailedCount)
+    .map((step) => step.index);
 
 test('a failed soft check flags its QA Step and the later QA Steps still follow', () => {
   const bundle = recordFailure(
@@ -202,7 +204,7 @@ test('a failed soft check flags its QA Step and the later QA Steps still follow'
     [
       {
         action: 'Open http://127.0.0.1:4321/',
-        expected: 'The page title is **Home**',
+        expected: 'The page title is **Home** (**check failed here**)',
       },
       { action: 'Reload the page', expected: 'The page title is **Home**' },
     ],
@@ -448,7 +450,7 @@ test('checks are worded in plain language, including negation', () => {
   );
 });
 
-test('checks a tester cannot see are not Expected Results', () => {
+test('checks a tester cannot see are counted as left out, not dropped', () => {
   assert.deepEqual(
     qaSteps(
       { type: 'action', kind: 'reload' },
@@ -468,11 +470,11 @@ test('checks a tester cannot see are not Expected Results', () => {
       },
       { type: 'check', matcher: 'toHaveURL', negated: false, subject: 'page' },
     ),
-    [{ action: 'Reload the page' }],
+    [{ action: 'Reload the page', expected: '(3 unworded checks left out)' }],
   );
 });
 
-test("a value check with the author's message names the message and the expected value", () => {
+test("a value check with the author's message reads the message alone", () => {
   assert.deepEqual(
     qaSteps(
       { type: 'action', kind: 'navigate', url: '/cart' },
@@ -513,13 +515,13 @@ test("a value check with the author's message names the message and the expected
       {
         action: 'Open http://127.0.0.1:4321/cart',
         expected:
-          '**cart line-item quantity** is **3**; **cart subtotal (qty × unit price)** is **15**; **items in stock** is more than **0**; **order status** is not **Pending**',
+          'Cart line-item quantity; cart subtotal (qty × unit price); items in stock; order status',
       },
     ],
   );
 });
 
-test('a value check says nothing a tester can use without a message or an expected value', () => {
+test('a check that says nothing a tester can use is counted as left out', () => {
   assert.deepEqual(
     qaSteps(
       { type: 'action', kind: 'reload' },
@@ -532,21 +534,21 @@ test('a value check says nothing a tester can use without a message or an expect
       },
       {
         type: 'check',
-        matcher: 'toBe',
-        negated: false,
-        subject: 'value',
-        description: 'cart line-item quantity',
-      },
-      {
-        type: 'check',
         matcher: 'toMatchObject',
         negated: false,
         subject: 'value',
         expected: 'x',
         description: 'cart',
       },
+      {
+        type: 'check',
+        matcher: 'toHaveAttribute',
+        negated: false,
+        subject: 'element',
+        target: { by: 'label', value: 'Email' },
+      },
     ),
-    [{ action: 'Reload the page' }],
+    [{ action: 'Reload the page', expected: '(3 unworded checks left out)' }],
   );
 });
 

@@ -34,6 +34,7 @@ export const GOLDENS = [
   'long-page--order-gift-cards-on-a-smoothly-scrolling-page',
   'certificates--add-three-recs-to-the-cart',
   'keyboard--move-from-username-to-password-with-tab',
+  'profile--review-the-account-profile',
 ];
 
 /** The 1.63 golden of a test's Jira text. */

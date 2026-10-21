@@ -175,7 +175,7 @@ Given both, a test must match both. An empty or missing list places no limit.
 
 How the test's own `test.step` groups appear:
 
-- `'sections'`: each group's title is a Section heading over its QA Steps, numbered continuously across Sections, with nested groups read as `Outer › Inner`.
+- `'sections'`: each group's title is a Section heading over its QA Steps, numbered continuously across Sections, with nested groups read as `Outer › Inner`. A group with only checks becomes a Section with one "Look at the …" step.
 - `'collapse'`: each outermost group becomes one QA Step named after it.
 - `'ignore'`: groups are dropped and QA Steps are listed flat.
 
@@ -293,15 +293,15 @@ On 1.53–1.62 the QA Steps and Expected Results read the same as on 1.63; scree
 
 ## What you get
 
-Each test's browser Actions (opening a URL, clicking, typing, pressing keys, choosing options) become numbered QA Steps, and the `expect` checks that follow an Action become its Expected Result. Waits, scripts, value reads, and API requests are left out because a tester cannot repeat them. A test's `test.step` groups become Sections (see [`testSteps`](#teststeps)).
+Each test's browser Actions (opening a URL, clicking, typing, pressing keys, choosing options) become numbered QA Steps, and the `expect` checks that follow an Action become its Expected Result. Waits, scripts, value reads, and API requests are left out because a tester cannot repeat them. A test's `test.step` groups become Sections (see [`testSteps`](#teststeps)). A group with only checks and no browser action becomes a Section of its own with one "Look at the …" step, whose Expected Result is the group's checks.
 
-A check's message names what it checks. `expect(cartQty, 'cart line-item quantity').toBe(3)` reads "**cart line-item quantity** is **3**", so a value the test read from the page still tells the tester what to look for; a value checked without a message is left out. On an element, the message is used only when the element has no readable name (a CSS selector, a test id, or a role without a name) and the page as recorded gives it none. A form, dialog, row, table, or navigation takes its name from its title, the same one later steps use for it as a part of the page: `expect(form, 'purchase form').toBeVisible()` on `locator('#purchase_1174')` reads "The **Forest carbon credits** form is visible" when the form holds that heading, and "**purchase form** is visible" when the page gives the form no name.
+A check's message names what it checks: `expect(cartQty, 'cart line-item quantity').toBe(3)` reads "cart line-item quantity" — the message is what the tester confirms, since the expected value is often one the test computed. A check that says nothing a tester could see (a value with no message, an element the runner could not name) is never dropped: the step counts it, "(1 unworded check left out)". A locator narrowed with `filter({ hasText })` keeps the filter: a count of one reads "one value reads **user@example.com**". On an element, the message is used only when the element has no readable name (a CSS selector, a test id, or a role without a name) and the page as recorded gives it none. A form, dialog, row, table, or navigation takes its name from its title, the same one later steps use for it as a part of the page: `expect(form, 'purchase form').toBeVisible()` on `locator('#purchase_1174')` reads "The **Forest carbon credits** form is visible" when the form holds that heading, and "**purchase form** is visible" when the page gives the form no name.
 
 A check against a regular expression needs the trace, which records the pattern. Plain text reads as what must appear (`toHaveURL(/login-error/)`: "The page address contains **login-error**"); any other pattern is shown as written ("matches **/^\/orders\/\d+$/**").
 
 ```
 1. Open http://127.0.0.1:4321/ — The **Fixture App** heading is visible
-2. Click the **Sign in** link — The page title is **Sign in**; **Username** is empty
+2. Click the **Sign in** link — The page title is **Sign in**; **Username** is empty; (1 unworded check left out)
 3. Type **demo-user** into **Username**
 4. Click the **Submit bad credentials** button — The page address contains **login-error**; **Invalid credentials** is visible; the **Login failed** heading is visible
 ```
