@@ -30,7 +30,10 @@ export type RecordedCall = {
   inputTime?: number;
   /** Whether the call touched a point or element to mark (a click, not a fill). */
   marks: boolean;
-  /** When the call last logged that its page navigated; unknown if it did not. */
+  /**
+   * When the call last logged, after its input, that its page navigated;
+   * unknown if it did not, or before trace format 9.
+   */
   navigatedAt?: number;
   /**
    * When the next call on the page may first have changed it, or

@@ -201,6 +201,24 @@ test('the password field type is read case-insensitively', async () => {
   }
 });
 
+/** A trace's entries with every trace file's format version relabeled. */
+function relabeled(
+  entries: Record<string, Uint8Array>,
+  from: number,
+  to: number,
+): Record<string, Uint8Array> {
+  for (const name of Object.keys(entries)) {
+    if (!name.endsWith('.trace')) continue;
+    entries[name] = strToU8(
+      strFromU8(entries[name]).replaceAll(
+        `"version":${from},`,
+        `"version":${to},`,
+      ),
+    );
+  }
+  return entries;
+}
+
 /** Writes `entries` as a trace.zip in a temporary directory and opens it. */
 async function openEntries(
   entries: Record<string, Uint8Array>,
@@ -217,14 +235,9 @@ async function openEntries(
 
 test('a trace in an unknown format version gives no screenshots and says why', async () => {
   // The v9 sample, relabeled as a future format.
-  const entries = unzipSync(await readFile(TRACES[9]));
-  for (const [name, data] of Object.entries(entries)) {
-    if (!name.endsWith('.trace')) continue;
-    entries[name] = strToU8(
-      strFromU8(data).replaceAll('"version":9,', '"version":11,'),
-    );
-  }
-  const source = await openEntries(entries);
+  const source = await openEntries(
+    relabeled(unzipSync(await readFile(TRACES[9])), 9, 11),
+  );
   assert.equal(source.capture(CLICK), undefined);
   assert.deepEqual(source.problem, {
     kind: 'unsupportedVersion',
@@ -948,16 +961,28 @@ test('trace format 8: a click that navigated keeps the frame it had before 1.63'
   // Only from format 9 does a navigation date a click's frame: the CI trace,
   // relabeled as format 8, gives the link click its last frame by its end.
   const entries = unzipSync(await readFile(fixture('v9-on-link-stale.zip')));
-  for (const name of Object.keys(entries)) {
-    if (!name.endsWith('.trace')) continue;
-    entries[name] = strToU8(
-      strFromU8(entries[name]).replaceAll('"version":9', '"version":8'),
-    );
-  }
-  const shots = markerShots(await openEntries(entries));
+  const shots = markerShots(await openEntries(relabeled(entries, 9, 8)));
   assert.deepEqual(await shots(DERIVED_SIGN_IN_STEPS.SIGN_IN_LINK), [
     'after home',
   ]);
+});
+
+test('trace format 9: an Action that waited for an earlier navigation before its input keeps its own frame', async () => {
+  // Before acting, an Action waits for a navigation still under way and
+  // logs `navigated to` too. The v9 sample's fill, given such a line, is
+  // still dated by its own end, as it navigated nothing.
+  const entries = unzipSync(await readFile(TRACE_ON[9]));
+  const fillStart =
+    '{"type":"log","callId":"call@21","time":1233.204,"message":"attempting fill action"}';
+  const waited =
+    '{"type":"log","callId":"call@21","time":1233.2,"message":"  navigated to \\"http://127.0.0.1:4321/login\\""}';
+  const trace = strFromU8(entries['1-trace.trace']);
+  assert.ok(trace.includes(fillStart), 'the fill logs its start');
+  entries['1-trace.trace'] = strToU8(
+    trace.replace(fillStart, `${waited}\n${fillStart}`),
+  );
+  const shots = markerShots(await openEntries(entries));
+  assert.deepEqual(await shots(SIGN_IN_STEPS.FILL), ['after signIn']);
 });
 
 /** A frame of a sample trace's screen recording, by its file name. */

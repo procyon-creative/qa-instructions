@@ -89,8 +89,9 @@ const MOVING_LOG = /element is not stable/;
 const STILL_LOG = /element is visible, enabled and stable/;
 
 /**
- * The log line an Action writes when its page navigated while it waited for
- * the navigations it scheduled (a link click, a form submit).
+ * The log line an Action writes when its page navigated: after its input,
+ * while it waited for the navigations it scheduled (a link click, a form
+ * submit); before it, while it waited for one an earlier call started.
  */
 const NAVIGATED_LOG = /^\s*navigated to /;
 
@@ -130,7 +131,10 @@ type CallRecord = {
   endTime?: number;
   /** When the call logged that it began scrolling to its element. */
   scrollTime?: number;
-  /** When the call last logged that its page navigated. */
+  /**
+   * When the call last logged, after its input, that its page navigated
+   * (from trace format 9).
+   */
   navigatedAt?: number;
   box?: QaBox;
   point?: QaPoint;
@@ -487,13 +491,17 @@ class TraceCalls {
 
   /**
    * Keeps what a call's log line dates: the start of its scroll to its
-   * element, its page's navigation, or a stability check.
+   * element, a navigation its input caused, or a stability check.
    */
   private addLog(record: CallRecord, time: number, message: string): void {
     if (record.scrollTime === undefined && SCROLL_LOG.test(message)) {
       record.scrollTime = time;
     }
-    if (this.datesNavigation && NAVIGATED_LOG.test(message)) {
+    if (
+      this.datesNavigation &&
+      record.inputSent &&
+      NAVIGATED_LOG.test(message)
+    ) {
       record.navigatedAt = time;
     }
     this.addStabilityCheck(record, time, message);
