@@ -41,7 +41,7 @@
     "css-select": "^6.0.0",
     "css-what": "^7.0.0",
     "domhandler": "^5.0.3",
-    "domutils": "^3.2.2",
+    "domutils": "^4.0.2",
     "fflate": "^0.8.3",
     "minimatch": "^10.2.6",
     "open": "^10.2.0",
