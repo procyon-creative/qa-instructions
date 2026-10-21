@@ -10,6 +10,16 @@ import type { Screencast, ScreencastFrame } from './screencast.js';
 const PAINT_LAG = 50;
 
 /**
+ * How long, in milliseconds, after an Action logs `navigated to` a frame of
+ * the recording can still show the page it left (QI-67). Across 800
+ * stressed Playwright 1.63 runs of the derived-steps sign-in test, such
+ * frames were painted at most 5ms after the log, and every frame painted
+ * 10ms or later showed the new page. As PAINT_LAG is about 3x its longest
+ * observed lag, this is 4x.
+ */
+const NAVIGATION_PAINT_LAG = 20;
+
+/**
  * How old, in milliseconds, the last painted frame may be at the moment of
  * an Action and still count as showing it, when the page changed too
  * recently to know that from its DOM snapshots. Around each Action,
@@ -124,16 +134,17 @@ export class RecordingFrames {
    * (see `afterTyping`).
    *
    * A call that navigated its page gets only a frame painted at least
-   * PAINT_LAG after it logged the navigation, or none: the browser keeps
-   * the old page on screen until the new one paints, so a frame painted by
-   * the call's end, or just after it, may show the page it left.
+   * NAVIGATION_PAINT_LAG after it logged the navigation, or none: the
+   * browser keeps the old page on screen until the new one paints, so a
+   * frame painted by the call's end, or just after it, may show the page it
+   * left.
    */
   afterAction(call: RecordedCall): ScreencastFrame | undefined {
     const { pageId, nextChange, navigatedAt } = call;
     if (navigatedAt !== undefined) {
       return this.screencast.lastPaintedBetween(
         pageId,
-        navigatedAt + PAINT_LAG,
+        navigatedAt + NAVIGATION_PAINT_LAG,
         nextChange,
       );
     }

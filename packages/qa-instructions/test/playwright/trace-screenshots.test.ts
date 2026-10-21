@@ -875,9 +875,10 @@ for (const [version, trace] of Object.entries(TRACE_ON)) {
     // end (none was painted after it before the click scrolled).
     assert.deepEqual(await shots(SIGN_IN_STEPS.OPEN), ['after home']);
     // The link click: no frame painted just before its input shows the page
-    // it met, and none after it was painted PAINT_LAG after it logged its
-    // navigation before the fill, so none (QI-67).
-    assert.deepEqual(await shots(SIGN_IN_STEPS.SIGN_IN_LINK), []);
+    // it met, so the last one painted after it, at least
+    // NAVIGATION_PAINT_LAG after it logged its navigation (QI-67), on the
+    // Sign in page.
+    assert.deepEqual(await shots(SIGN_IN_STEPS.SIGN_IN_LINK), ['after signIn']);
     // The fill, after its end, never a frame from before it marked with the
     // field's box: as before 1.63, only a click point marks the moment.
     assert.deepEqual(await shots(SIGN_IN_STEPS.FILL), ['after signIn']);
@@ -918,9 +919,15 @@ for (const [version, trace] of Object.entries(TRACE_ON)) {
     // Nothing shows the page had stopped scrolling after the fill.
     assert.deepEqual(await shots(SIGN_IN_STEPS.FILL), []);
     // Each click's navigation is logged, so it is dated without snapshots
-    // too: every frame after either click was painted within PAINT_LAG of
-    // its navigation, so could still show the page it left (QI-67).
-    assert.deepEqual(await shots(SIGN_IN_STEPS.SIGN_IN_LINK), []);
+    // too (QI-67). The fill's input is not, so the link click's window ends
+    // as the fill starts: in the 1.64 sample no frame was painted in it
+    // NAVIGATION_PAINT_LAG after the navigation. Every frame after the
+    // submit click was painted within NAVIGATION_PAINT_LAG of its
+    // navigation, so could still show the page it left.
+    assert.deepEqual(
+      await shots(SIGN_IN_STEPS.SIGN_IN_LINK),
+      version === '9' ? ['after signIn'] : [],
+    );
     assert.deepEqual(await shots(SIGN_IN_STEPS.SUBMIT), []);
   });
 }
@@ -935,7 +942,8 @@ for (const [version, trace] of Object.entries(TRACE_ON)) {
  * home page; in `v9-on-submit-stale.zip` (a local run under load) the only
  * frames after the submit click were painted 5ms after it logged its
  * navigation and still show the Sign in page. A navigating click gets only
- * a frame painted at least PAINT_LAG after it logged its navigation.
+ * a frame painted at least NAVIGATION_PAINT_LAG (20ms) after it logged its
+ * navigation.
  */
 const DERIVED_SIGN_IN_STEPS = {
   SIGN_IN_LINK: ActionRef.of(5, 'Click'),
