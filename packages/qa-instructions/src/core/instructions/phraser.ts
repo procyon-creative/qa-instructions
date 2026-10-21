@@ -156,7 +156,11 @@ export class StepPhraser {
       case 'uncheck':
         return `Uncheck ${target}`;
       case 'select':
-        return `Choose ${value} in ${target}`;
+        // Playwright before 1.63 records no value for a selectOption, so
+        // there is nothing to emphasize and an empty value would read as ****.
+        return event.value
+          ? `Choose ${value} in ${target}`
+          : `Choose an option in ${target}`;
       case 'upload':
         return `Upload a file to ${target}`;
       case 'goBack':
