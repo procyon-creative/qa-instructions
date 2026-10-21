@@ -8,7 +8,7 @@
 
 2. Click the **Sign in** link
 
-   **Expected:** The page title is **Sign in**; **Username** is empty
+   **Expected:** The page title is **Sign in**; **Username** is empty; (1 unworded check left out)
 
    ![Step 2: Click the Sign in link](assets/step-02.png)
 

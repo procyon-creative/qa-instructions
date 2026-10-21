@@ -273,23 +273,23 @@ test('a failed soft check flags its QA Step and the later QA Steps still follow'
     ]);
     assert.equal(bundle.meta.status, 'incomplete');
     assert.deepEqual(
-      bundle.steps.map(({ expected, failed, checkFailed }) => ({
+      bundle.steps.map(({ expected, failed, checkFailedCount }) => ({
         expected,
         failed,
-        checkFailed,
+        checkFailedCount,
       })),
       [
         {
-          expected: 'The page title is **Home**',
+          expected: 'The page title is **Home** (**check failed here**)',
           failed: undefined,
-          checkFailed: true,
+          checkFailedCount: 1,
         },
         {
-          expected: 'The page title is **Sign in**',
+          expected: 'The page title is **Sign in** (**check failed here**)',
           failed: undefined,
-          checkFailed: true,
+          checkFailedCount: 1,
         },
-        { expected: undefined, failed: undefined, checkFailed: undefined },
+        { expected: undefined, failed: undefined, checkFailedCount: undefined },
       ],
     );
   } finally {
@@ -467,7 +467,7 @@ test('reporter derives QA Steps from an unmodified test run', async () => {
       {
         index: 2,
         action: 'Click the **Sign in** link',
-        expected: undefined,
+        expected: '(1 unworded check left out)',
         url: undefined,
       },
       {
@@ -487,7 +487,7 @@ test('reporter derives QA Steps from an unmodified test run', async () => {
       {
         index: 5,
         action: 'Click the **submit** button',
-        expected: "**It's broken** is visible",
+        expected: "**It's broken** is visible; (1 unworded check left out)",
         url: undefined,
       },
       {

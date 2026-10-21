@@ -42,7 +42,7 @@ export function createBundleBuilder(): BundleBuilder {
         resultAssetId: input.resultAssetId,
         section: input.section,
         failed: input.failed || undefined,
-        checkFailed: input.checkFailed || undefined,
+        checkFailedCount: input.checkFailedCount || undefined,
         warning: input.warning || undefined,
         approximate: input.approximate || undefined,
         screenshotMoment: input.screenshotMoment,

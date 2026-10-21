@@ -69,8 +69,9 @@ test('a check the test named by a variable gets the element the source says it c
   });
 
   assert.deepEqual(expected(source, check), ['**Quantity** shows **3**']);
-  // Without the source, as without a trace: nothing to name.
-  assert.deepEqual(expected(undefined, check), [undefined]);
+  // Without the source, as without a trace: nothing to name, so the check
+  // is counted as left out instead.
+  assert.deepEqual(expected(undefined, check), ['(1 unworded check left out)']);
 });
 
 test('what the test reported wins over what the source recorded', () => {
@@ -91,7 +92,7 @@ test('what the test reported wins over what the source recorded', () => {
   ]);
 });
 
-test('a computed expected value is the value the source says the test expected', () => {
+test('a messaged value check reads the message the test gave it, computed value or not', () => {
   const check: TestEvent = {
     type: 'check',
     matcher: 'toBeCloseTo',
@@ -100,9 +101,11 @@ test('a computed expected value is the value the source says the test expected',
     description: 'cart subtotal',
     ref: 'c1',
   };
+  // The expected value the source read (15) is one the test computed; the
+  // message alone is what a tester could confirm.
   assert.deepEqual(
     expected(new CheckSource({ c1: { expected: '15' } }), check),
-    ['**cart subtotal** is **15**'],
+    ['Cart subtotal'],
   );
 });
 
@@ -132,10 +135,11 @@ test('a failed check the source makes readable marks its QA Step as failing', ()
       .bundle.steps.map(({ expected, failed }) => ({ expected, failed })),
     [{ expected: '**Quantity** shows **3**', failed: true }],
   );
-  // Text only, the check says nothing a tester can see, so no step is marked.
+  // Text only, the check says nothing a tester can see, but it is still
+  // counted, and it is still where the test failed.
   assert.deepEqual(
     recorder.toBundle().steps.map(({ failed }) => failed),
-    [undefined],
+    [true],
   );
 });
 

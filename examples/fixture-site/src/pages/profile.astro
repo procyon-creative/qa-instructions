@@ -1,0 +1,43 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base title="Account">
+  <h1>Account</h1>
+  <div class="card">
+    <h2>Profile</h2>
+    <dl>
+      <dt>Name:</dt>
+      <dd>Demo User</dd>
+      <dt>Email:</dt>
+      <dd>user@example.com</dd>
+    </dl>
+  </div>
+  <div class="card">
+    <h2>Details</h2>
+    <dl>
+      <dt>Plan:</dt>
+      <dd>Standard</dd>
+      <dt>Region:</dt>
+      <dd>US West</dd>
+    </dl>
+  </div>
+</Base>
+<style>
+  .card {
+    border: 1px solid #111;
+    padding: 4px 16px;
+    margin: 16px 0;
+  }
+  dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 4px 16px;
+    margin: 8px 0;
+  }
+  dt {
+    font-weight: 700;
+  }
+  dd {
+    margin: 0;
+  }
+</style>

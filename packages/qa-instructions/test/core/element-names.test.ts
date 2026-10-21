@@ -335,7 +335,12 @@ test('a check whose subject the runner could not read is an element check when t
       ],
       { quantity: element('input', { attributes: { type: 'number' } }) },
     ),
-    [{ action: 'Reload the page', expected: 'The number field shows **3**' }],
+    [
+      {
+        action: 'Reload the page',
+        expected: 'The number field shows **3**; (1 unworded check left out)',
+      },
+    ],
   );
 });
 

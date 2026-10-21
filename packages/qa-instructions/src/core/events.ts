@@ -27,6 +27,12 @@ export type ElementTarget =
       type?: string;
     };
 
+/**
+ * The test narrowed its locator with `filter({ hasText })`: only elements
+ * showing that text count, whatever kind of element the locator finds.
+ */
+export type FilteredElementTarget = ElementTarget & { hasText?: string };
+
 /** Things a person can do in a browser. */
 export type UserActionKind =
   | 'navigate'
@@ -111,7 +117,7 @@ export type CheckEvent = {
   negated: boolean;
   /** What was checked: an element, the page itself, or a plain value. */
   subject: 'element' | 'page' | 'value';
-  target?: ElementTarget;
+  target?: FilteredElementTarget;
   /** The expected value, when the runner reports one a person can read. */
   expected?: string;
   /** The pattern the checked text must match, when the check expects one. */

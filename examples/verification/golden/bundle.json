@@ -25,7 +25,7 @@
     {
       "index": 3,
       "action": "Click the element",
-      "expected": "The page shows **Invalid credentials**; the page shows **STEP 3 ERROR**"
+      "expected": "The page shows **Invalid credentials**; the page shows **STEP 3 ERROR**; (1 unworded check left out)"
     }
   ],
   "assets": {}

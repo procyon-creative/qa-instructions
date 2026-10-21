@@ -23,12 +23,15 @@ const GIFT_CARDS = 'long-page--order-gift-cards-on-a-smoothly-scrolling-page';
 /**
  * Whether a step may have no Step Screenshot rather than a misleading one:
  * a fill when the recording painted no frame between it and the next Action
- * (every earlier frame may show the field before it was typed into), and
- * the check of an already checked option (Playwright never scrolls to it).
+ * (every earlier frame may show the field before it was typed into), the
+ * check of an already checked option (Playwright never scrolls to it), and
+ * a look-at step (a check-only group's step has no Action to photograph).
  */
 function mayLackScreenshot(name: string, step: BundleStep): boolean {
   return (
-    step.action.startsWith('Type ') || (name === GIFT_CARDS && step.index === 2)
+    step.action.startsWith('Type ') ||
+    step.action.startsWith('Look at ') ||
+    (name === GIFT_CARDS && step.index === 2)
   );
 }
 

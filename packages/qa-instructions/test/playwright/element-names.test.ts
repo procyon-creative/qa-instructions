@@ -47,6 +47,47 @@ test('a CSS selector tells what kind of element it ends on, never shown to a tes
   });
 });
 
+test('a `filter({ hasText })` stays on the element the locator ends on', () => {
+  const parser = new LocatorParser();
+  assert.deepEqual(
+    parser.parse(
+      `getByRole('definition').filter({ hasText: 'user@example.com' })`,
+    ),
+    {
+      by: 'role',
+      role: 'definition',
+      hasText: 'user@example.com',
+    },
+  );
+  // A filter on an earlier call still narrows the whole chain.
+  assert.deepEqual(
+    parser.parse(
+      `getByRole('list').filter({ hasText: 'Paid' }).getByRole('listitem')`,
+    ),
+    {
+      by: 'role',
+      role: 'listitem',
+      hasText: 'Paid',
+    },
+  );
+  // A `filter({ has })` earlier in the chain does not shade the text one.
+  assert.deepEqual(
+    parser.parse(
+      `locator('.card').filter({ has: getByRole('heading', { name: 'Profile' }) }).getByRole('definition').filter({ hasText: 'user@example.com' })`,
+    ),
+    {
+      by: 'role',
+      role: 'definition',
+      hasText: 'user@example.com',
+    },
+  );
+  // No filter: nothing carried.
+  assert.deepEqual(parser.parse(`getByRole('definition')`), {
+    by: 'role',
+    role: 'definition',
+  });
+});
+
 test('before 1.63 an element stays marked after its call, and the mark is not taken for a later call', async () => {
   // Trace format 8 from test/fixtures/traces/scenario.spec.ts: the field
   // filled first keeps its mark while the button is clicked.

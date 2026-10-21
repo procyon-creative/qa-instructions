@@ -12,6 +12,7 @@ import type {
 import type { QaAssetInput, QaRunBundle, QaStepInput } from '../model.js';
 import { InlineMarkup } from '../render/inline-markup.js';
 import { QaSite } from '../render/qa-site.js';
+import { QaWording } from '../render/view.js';
 import {
   ResultScreenshotPicker,
   StepScreenshotPicker,
@@ -92,6 +93,31 @@ const TYPING: ReadonlySet<ActionKind> = new Set<UserActionKind>([
   'type',
 ]);
 
+/** A check of a step as the Expected Result will show it. */
+type SeenCheck = {
+  /** What a tester reads, or undefined when the check says nothing they could see. */
+  phrase: string | undefined;
+  /** A check that failed so hard the test stopped there. */
+  failed: boolean;
+  /** A failed soft check: the test went on. */
+  softFailed: boolean;
+};
+
+/** One open group of the test's own (e.g. a Playwright `test.step`). */
+type OpenGroup = {
+  /** Titles of the group and the groups holding it, outermost first. */
+  section: string[];
+  /** The group (or a group inside it) has a QA Step for its Actions. */
+  hasStep: boolean;
+  /** The warning step the group's script left, if one did. */
+  warned?: PendingStep;
+  /**
+   * Checks made before that step: on a check-only group they become its
+   * Expected Result; on a mixed group they stay on the step before them.
+   */
+  checks: CheckEvent[];
+};
+
 type PendingStep = {
   /**
    * The step's words, or the Action it describes (a user Action, or for a
@@ -125,6 +151,11 @@ type PendingStep = {
    * earlier step, which it continues if the warning steps between them go.
    */
   resumes?: PendingStep;
+  /**
+   * A step of a check-only group: the tester looks the group's subject
+   * over, so a check about something no one can name says "it".
+   */
+  lookAt?: boolean;
 };
 
 /**
@@ -165,6 +196,8 @@ export class QaInstructionsRecorder implements TestEventSink {
   private readonly typed: { ref: string; value: string }[] = [];
   /** Titles of the open groups, outermost first. */
   private readonly groups: string[] = [];
+  /** The open groups, parallel to `groups`. */
+  private readonly openGroups: OpenGroup[] = [];
   /** The QA Step the open outermost group collapsed into, once it has one. */
   private collapsedStep?: PendingStep;
   /** The open outermost group's QA Step that a warning step interrupted. */
@@ -215,10 +248,17 @@ export class QaInstructionsRecorder implements TestEventSink {
           this.interruptedStep = undefined;
         }
         this.groups.push(event.title);
+        this.openGroups.push({
+          section: [...this.groups],
+          hasStep: false,
+          checks: [],
+        });
         break;
-      case 'groupEnd':
+      case 'groupEnd': {
         this.groups.pop();
+        this.endGroup(this.openGroups.pop());
         break;
+      }
       case 'testEnd':
         this.end = event;
         break;
@@ -275,15 +315,21 @@ export class QaInstructionsRecorder implements TestEventSink {
         result && this.screenshotAsset(`${id}-result`, result);
       if (asset) builder.addAsset(asset);
       if (resultAsset) builder.addAsset(resultAsset);
-      const checks = this.seenChecks(step.checks, screenshots);
+      const checks = this.seenChecks(
+        step.checks,
+        screenshots,
+        step.lookAt === true,
+      );
       builder.addStep({
         action,
         url: step.url,
-        expected: this.expectedResult(checks.map(({ phrase }) => phrase)),
+        expected: this.expectedResult(checks),
         section: step.section,
         failed:
           step.failed ?? (checks.some(({ failed }) => failed) || undefined),
-        checkFailed: checks.some(({ softFailed }) => softFailed) || undefined,
+        checkFailedCount:
+          checks.reduce((n, { softFailed }) => n + (softFailed ? 1 : 0), 0) ||
+          undefined,
         warning: step.warning,
         approximate: step.approximate,
         ...this.captureFields(capture, screenshot, asset),
@@ -421,6 +467,7 @@ export class QaInstructionsRecorder implements TestEventSink {
     if (TYPING.has(event.kind) && event.value && event.ref !== undefined) {
       this.typed.push({ ref: event.ref, value: event.value });
     }
+    this.startStep();
     const url =
       event.kind === 'navigate' ? this.resolveUrl(event.url) : undefined;
     if (this.presentation === 'collapse' && this.groups.length > 0) {
@@ -440,22 +487,30 @@ export class QaInstructionsRecorder implements TestEventSink {
   }
 
   /**
-   * Adds a warning step where the test changed the page by script. It is
-   * never folded into a collapsed group: the group's later Actions start a
-   * new step after it, so the order stays true. Its screenshot shows the
-   * page the script left.
+   * Adds a warning step where the test may have changed the page by
+   * script. It is never folded into a collapsed group: the group's later
+   * Actions start a new step after it, so the order stays true. Its
+   * screenshot shows the page the script left. Whether the script changed
+   * the page is decided once the run is recorded, so a group the warning
+   * falls in is not marked as mixed here: the checks it held back follow
+   * the warning step's fate at the group's end.
    */
   private warn(event: ActionEvent): void {
     this.interruptedStep = this.collapsedStep ?? this.interruptedStep;
     this.collapsedStep = undefined;
-    this.steps.push({
+    const step: PendingStep = {
       action: event,
       section: this.currentSection(),
       checks: [],
       warning: true,
       ref: event.ref,
       lastRef: event.ref,
-    });
+    };
+    this.steps.push(step);
+    const group = this.openGroups.at(-1);
+    // The first warning is where the check-only group's step goes before;
+    // the later ones follow it.
+    if (group && !group.hasStep && !group.warned) group.warned = step;
   }
 
   /**
@@ -489,32 +544,95 @@ export class QaInstructionsRecorder implements TestEventSink {
     return [...this.groups];
   }
 
+  /**
+   * A group closed. One whose checks were never joined by an Action of its
+   * own becomes a QA Step of its own, named after the group and carrying
+   * the checks as its Expected Result. Otherwise the checks stayed where
+   * they would have landed as they arrived.
+   */
+  private endGroup(group: OpenGroup | undefined): void {
+    if (!group || this.presentation !== 'sections') return;
+    if (group.hasStep) {
+      this.steps.at(-1)?.checks.push(...group.checks);
+      return;
+    }
+    if (!group.checks.length) return;
+    const title = group.section.at(-1) ?? '';
+    const step: PendingStep = {
+      action: this.phraser.group(title),
+      section: group.section,
+      checks: group.checks,
+      lookAt: true,
+    };
+    // A script of the group's left a warning step: the group's step comes
+    // before it, where its checks belong, so a warning the recording keeps
+    // follows it and one it drops folds its checks into it.
+    if (group.warned) {
+      const warning = this.steps.indexOf(group.warned);
+      this.steps.splice(warning < 0 ? this.steps.length : warning, 0, step);
+      return;
+    }
+    this.steps.push(step);
+  }
+
+  /**
+   * A QA Step starts for an Action: the checks open groups held back join
+   * the step before it, where they would have landed as they arrived, and
+   * the groups count as mixed from here on.
+   */
+  private startStep(): void {
+    for (const group of this.openGroups) {
+      this.steps.at(-1)?.checks.push(...group.checks);
+      group.checks = [];
+      group.hasStep = true;
+    }
+  }
+
   private onCheck(event: CheckEvent): void {
+    const group = this.openGroups.at(-1);
+    // A group with a warning step already reads as today: the checks that
+    // follow the script join the step before them as they arrive.
+    if (
+      this.presentation === 'sections' &&
+      group &&
+      !group.hasStep &&
+      !group.warned
+    ) {
+      group.checks.push(event);
+      return;
+    }
     this.steps.at(-1)?.checks.push(event);
   }
 
   /**
    * The checks a tester can see, phrased, after filling in from the source
    * what the runner did not report (the element checked, the value
-   * expected). What the runner reported wins.
+   * expected). What the runner reported wins. A check left unphrased is
+   * one a tester could not see: it is counted in the Expected Result
+   * rather than dropped.
    */
   private seenChecks(
     checks: CheckEvent[],
     source: ScreenshotSource,
-  ): { phrase: string; failed: boolean; softFailed: boolean }[] {
-    return checks.flatMap((event) => {
+    lookAt = false,
+  ): SeenCheck[] {
+    return checks.map((event) => {
       const element =
         event.ref === undefined
           ? undefined
           : source.check?.(event.ref)?.element;
-      const phrase = this.phraser.check(this.completed(event, source), {
-        element,
-      });
+      const phrase = this.phraser.check(
+        this.completed(event, source),
+        { element },
+        lookAt,
+      );
       const failed = event.failed === true;
       const soft = this.isSoft(event);
-      return phrase
-        ? [{ phrase, failed: failed && !soft, softFailed: failed && soft }]
-        : [];
+      return {
+        phrase,
+        failed: failed && !soft,
+        softFailed: failed && soft,
+      };
     });
   }
 
@@ -583,7 +701,25 @@ export class QaInstructionsRecorder implements TestEventSink {
     };
   }
 
-  private expectedResult(phrases: string[]): string | undefined {
+  /**
+   * The step's Expected Result: the checks a tester can see, each failed
+   * soft check marked where it sits, and a count of the checks left out
+   * for saying nothing a tester could see.
+   */
+  private expectedResult(checks: SeenCheck[]): string | undefined {
+    const phrases = checks
+      .filter(({ phrase }) => phrase !== undefined)
+      .map(({ phrase, softFailed }) =>
+        softFailed
+          ? `${phrase} (**${QaWording.checkFailed}**)`
+          : (phrase as string),
+      );
+    const unworded = checks.filter(({ phrase }) => phrase === undefined);
+    if (unworded.length > 0) {
+      phrases.push(
+        `(${unworded.length} unworded check${unworded.length === 1 ? '' : 's'} left out)`,
+      );
+    }
     if (phrases.length === 0) return undefined;
     const joined = phrases.join('; ');
     return joined.charAt(0).toUpperCase() + joined.slice(1);

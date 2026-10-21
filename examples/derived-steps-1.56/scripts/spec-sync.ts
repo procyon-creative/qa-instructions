@@ -18,6 +18,7 @@ export const SPECS = [
   'long-page.spec.ts',
   'certificates.spec.ts',
   'keyboard.spec.ts',
+  'profile.spec.ts',
 ];
 
 /**
