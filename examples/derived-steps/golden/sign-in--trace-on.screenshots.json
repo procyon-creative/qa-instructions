@@ -22,6 +22,7 @@
     },
     {
       "action": "Click the **Sign in** link",
+      "optional": true,
       "byMoment": {
         "action": [
           {
@@ -57,6 +58,7 @@
     },
     {
       "action": "Click the **Submit bad credentials** button",
+      "optional": true,
       "byMoment": {
         "action": [
           {
