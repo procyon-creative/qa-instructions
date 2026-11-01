@@ -47,7 +47,7 @@ jobs:
       # Builds the site, then checks the built page (install command, trace
       # setting, links).
       - run: npm test
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: docs-site/dist
 
